@@ -58,6 +58,7 @@ api/uploads/*
 # Sensitive files
 pass
 deploy/api.env
+deploy/*.env
 
 # Cursor / AI tooling
 .cursor/

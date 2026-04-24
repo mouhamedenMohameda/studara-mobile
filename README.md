@@ -285,6 +285,86 @@ Scan the QR code with the **Expo Go** app (iOS / Android).
 
 ---
 
+## Modifier un fichier `.env` sur le serveur (VPS)
+
+### 1) Se connecter en SSH
+
+```bash
+ssh root@5.189.153.144
+```
+
+### 2) Éditer le fichier `.env` utilisé par l’API
+
+Sur le serveur Studara, l’API est généralement déployée dans:
+
+```bash
+cd /var/www/studara/api
+sudo nano .env
+```
+
+Exemple (clé dédiée au “Résumé intelligent de cours”):
+
+```env
+SUMARRY_OPENAI_API_KEY=sk-...
+```
+
+### 3) Recharger l’API (PM2) pour prendre en compte les variables
+
+```bash
+pm2 reload studara-api --update-env
+pm2 status
+```
+
+### 4) Vérifier rapidement
+
+```bash
+curl -i http://127.0.0.1:3000/health
+curl -i http://5.189.153.144/health
+```
+
+---
+
+## Déployer des changements sur le VPS (via `studara-admin/deploy/deploy.sh`)
+
+### 0) Prérequis
+
+- Accès SSH au VPS (idéalement **clé SSH**).
+- Le fichier `.env` existe déjà côté serveur: `/var/www/studara/api/.env`
+- PM2 est installé et l’app s’appelle **`studara-api`** (cf. `pm2 ls`).
+
+### 1) Lancer le déploiement depuis ton PC
+
+Depuis le dossier `studara-admin`:
+
+```bash
+cd studara-admin
+bash deploy/deploy.sh
+```
+
+Ce script fait:
+- build TypeScript en local
+- copie le code sur le serveur dans `/var/www/studara/api`
+- applique toutes les migrations SQL dans `src/db/migrations/`
+- reload PM2 (`pm2 reload studara-api --update-env`)
+
+### 2) Vérifier côté serveur (après déploiement)
+
+```bash
+ssh root@5.189.153.144
+pm2 ls
+curl -i http://127.0.0.1:3000/health
+```
+
+### 3) Dépannage rapide
+
+- Si une migration échoue: vérifier `DATABASE_URL` dans `/var/www/studara/api/.env`
+- Si l’API ne redémarre pas: `pm2 logs studara-api --lines 200`
+- Si Nginx répond 404: vérifier la conf dans `/etc/nginx/sites-available/tawjeeh` puis `sudo nginx -t && sudo systemctl reload nginx`
+
+> Sécurité: évite de partager des mots de passe/keys dans le chat ou dans Git. Utilise des clés SSH et change tout secret exposé.
+
+---
+
 ## Roadmap
 
 ### V1 (Current)

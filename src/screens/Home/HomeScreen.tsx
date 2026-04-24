@@ -203,9 +203,25 @@ export default function HomeScreen() {
       label: lang === 'ar' ? 'ويسبر' : 'Whisper',
       description: lang === 'ar' ? 'تحويل الصوت لنص' : 'Transcription vocale',
       emoji: '🎙️',
+      disabled: false,
       onPress: () => navigation.navigate('VoiceNotes' as any),
     },
-  ], [lang, navigation]);
+    {
+      key: 'ai_summary',
+      icon: 'sparkles' as const,
+      color: '#7C3AED',
+      gradientColors: ['#7C3AED', '#5B21B6'] as [string, string],
+      label: lang === 'ar' ? '✨ ملخص ذكي' : '✨ Résumé intelligent',
+      description: lang === 'ar' ? 'PDF/صورة → ملخص + PDF' : 'PDF/image → résumé + PDF',
+      emoji: '📄',
+      disabled: false,
+      onPress: () => {
+        const root = (navigation as any)?.getParent?.()?.getParent?.();
+        if (root?.navigate) root.navigate('AISummaryImport');
+        else navigation.navigate('AISummaryImport' as any);
+      },
+    },
+  ], [lang, navigation, t]);
 
   const COMMUNITY_TILES = useMemo(() => [
     {

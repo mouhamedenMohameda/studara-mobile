@@ -149,6 +149,9 @@ export type RootStackParamList = {
   ForumPost: { postId: string; postTitle: string };
   PasswordResetApproval: { intentId: string };
   PasswordResetSetNew: { intentId: string; ticket: string };
+  AISummaryImport: undefined;
+  AISummaryOptions: { documentId: string };
+  AISummaryResult: { summaryId: string };
 };
 
 export type AuthStackParamList = {

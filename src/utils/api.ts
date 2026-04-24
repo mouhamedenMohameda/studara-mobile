@@ -6,7 +6,9 @@
  * - `EXPO_PUBLIC_API_BASE` (recommended)
  */
 
-const DEFAULT_API_BASE = 'https://api.radar-mr.com/api/v1';
+// Default to VPS IP in this migration workspace.
+// You can override without rebuild using Expo env: EXPO_PUBLIC_API_BASE.
+const DEFAULT_API_BASE = 'http://5.189.153.144/api/v1';
 export const API_BASE =
   (typeof process !== 'undefined' && (process as any)?.env?.EXPO_PUBLIC_API_BASE) || DEFAULT_API_BASE;
 

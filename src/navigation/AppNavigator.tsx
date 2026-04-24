@@ -26,6 +26,9 @@ import ExploreModalNavigator from './ExploreModalNavigator';
 import * as Notifications from 'expo-notifications';
 import PasswordResetApprovalScreen from '../screens/Security/PasswordResetApprovalScreen';
 import PasswordResetSetNewPasswordScreen from '../screens/Security/PasswordResetSetNewPasswordScreen';
+import AISummaryImportScreen from '../screens/AISummaries/AISummaryImportScreen';
+import AISummaryOptionsScreen from '../screens/AISummaries/AISummaryOptionsScreen';
+import AISummaryResultScreen from '../screens/AISummaries/AISummaryResultScreen';
 import { apiRequest } from '../utils/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PENDING_RESET_INTENT_KEY } from '../constants/security';
@@ -105,6 +108,27 @@ const RootNavigator = () => {
         <Stack.Screen
           name="ExploreModal"
           component={ExploreModalNavigator}
+          options={{ animation: 'slide_from_right' }}
+        />
+      )}
+      {isAuthenticated && (
+        <Stack.Screen
+          name="AISummaryImport"
+          component={AISummaryImportScreen}
+          options={{ animation: 'slide_from_right' }}
+        />
+      )}
+      {isAuthenticated && (
+        <Stack.Screen
+          name="AISummaryOptions"
+          component={AISummaryOptionsScreen}
+          options={{ animation: 'slide_from_right' }}
+        />
+      )}
+      {isAuthenticated && (
+        <Stack.Screen
+          name="AISummaryResult"
+          component={AISummaryResultScreen}
           options={{ animation: 'slide_from_right' }}
         />
       )}
