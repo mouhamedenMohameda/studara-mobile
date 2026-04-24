@@ -140,8 +140,8 @@ export default function PremiumGate({ featureKey, loading, hasAccess, balanceMru
                 </Text>
                 {[
                   isAr
-                    ? ['1️⃣', 'ادفع عبر Bankily أو Sedad']
-                    : ['1️⃣', 'Payez via Bankily ou Sedad'],
+                    ? ['1️⃣', 'ادفع عبر Bankily أو Sedad أو Masrivy']
+                    : ['1️⃣', 'Payez via Bankily, Sedad ou Masrivy'],
                   isAr
                     ? ['2️⃣', 'أرسل لقطة شاشة الإيصال']
                     : ['2️⃣', 'Envoyez le reçu de paiement'],

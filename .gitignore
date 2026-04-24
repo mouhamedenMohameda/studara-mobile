@@ -66,3 +66,12 @@ deploy/api.env
 # Media dumps (keep out of repo)
 *.m4a
 *.mp4
+
+# Local notes / prompts / scratch
+AMELIORATIONS.txt
+appactually.txt
+errors_fix_propmpt
+
+# Local experiments
+test-audio/
+imageispuration/

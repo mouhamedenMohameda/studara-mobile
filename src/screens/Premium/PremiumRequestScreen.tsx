@@ -10,6 +10,7 @@
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
+import { AppIcon } from '@/icons';
 import { Text } from '@/ui/Text';
 import { TextInput } from '@/ui/TextInput';
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Image, Platform, I18nManager, KeyboardAvoidingView } from 'react-native';
@@ -19,6 +20,8 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { RootStackParamList } from '../../types';
 import { Colors } from '../../theme';
 import { API_BASE } from '../../utils/api';
@@ -27,20 +30,19 @@ import { safeBack } from '../../utils/safeBack';
 type Nav   = StackNavigationProp<RootStackParamList, 'PremiumRequest'>;
 type Route = RouteProp<RootStackParamList, 'PremiumRequest'>;
 
-I18nManager.forceRTL(true);
+const isRtl = I18nManager.isRTL;
 
-// ── Payment accounts (Bankily + Sedad) ───────────────────────────────────────
+// ── Payment accounts (Bankily + Sedad + Masrivy) ─────────────────────────────
 const PAYMENT_ACCOUNTS = [
   { bank: 'Bankily', phone: '42986738', color: '#16A34A' },
   { bank: 'Sedad',   phone: '32164356', color: '#2563EB' },
+  { bank: 'Masrivy', phone: '36863516', color: '#7C3AED' },
 ] as const;
 
 const FALLBACK_BANKS = [
-  { id: 1, name_ar: 'بنكيلي',              name_fr: 'Bankily', app_name: 'Bankily'    },
-  { id: 2, name_ar: 'مصريفي',              name_fr: 'Masrivi', app_name: 'Masrivi'   },
-  { id: 3, name_ar: 'سداد',               name_fr: 'Sedad',   app_name: 'Sedad'     },
-  { id: 4, name_ar: 'بنك الموريتاني',      name_fr: 'BCI',     app_name: 'BCI Mobile' },
-  { id: 5, name_ar: 'بنك الخليج الموريتاني', name_fr: 'GBM',   app_name: 'GBM Mobile' },
+  { id: 1, name_ar: 'بنكيلي', name_fr: 'Bankily', app_name: 'Bankily' },
+  { id: 2, name_ar: 'مصريفي', name_fr: 'Masrivy', app_name: 'Masrivy' },
+  { id: 3, name_ar: 'سداد',  name_fr: 'Sedad',   app_name: 'Sedad'   },
 ];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -63,6 +65,21 @@ interface Bank {
   name_ar:  string;
   name_fr:  string;
   app_name: string;
+}
+
+const ALLOWED_BANK_APP_NAMES = new Set(['Bankily', 'Sedad', 'Masrivy']);
+const BANK_ORDER = ['Bankily', 'Masrivy', 'Sedad'] as const;
+
+function normalizeBanks(input: Bank[]): Bank[] {
+  const byApp = new Map<string, Bank>();
+  for (const b of input) {
+    if (!ALLOWED_BANK_APP_NAMES.has(b.app_name)) continue;
+    if (!byApp.has(b.app_name)) byApp.set(b.app_name, b);
+  }
+
+  // Ensure we always show exactly the three banks, in a stable order.
+  const fallbackByApp = new Map(FALLBACK_BANKS.map(b => [b.app_name, b] as const));
+  return BANK_ORDER.map(app => byApp.get(app) ?? fallbackByApp.get(app)!).filter(Boolean);
 }
 
 const FEATURE_ICONS: Record<string, string> = {
@@ -168,12 +185,22 @@ function BankItem({ bank, selected, onSelect }: {
       onPress={onSelect}
       activeOpacity={0.7}
     >
-      <View style={styles.bankIcon}><Text style={styles.bankIconText}>🏦</Text></View>
+      <View style={[styles.bankIcon, selected && styles.bankIconSelected]}>
+        <AppIcon name="wallet" size={18} color={selected ? '#1D4ED8' : '#6B7280'} />
+      </View>
       <View style={styles.bankInfo}>
         <Text style={[styles.bankName, selected && styles.bankNameSelected]}>{bank.name_ar}</Text>
         <Text style={styles.bankApp}>{bank.app_name}</Text>
       </View>
-      {selected && <Text style={styles.bankCheck}>✓</Text>}
+      <View style={styles.bankRight}>
+        {selected && (
+          <View style={styles.bankCheckPill}>
+            <AppIcon name="checkmarkCircle" size={16} color="#2563EB" />
+            <Text style={styles.bankCheckText}>محدد</Text>
+          </View>
+        )}
+        <AppIcon name={isRtl ? 'chevronBack' : 'chevronForward'} size={16} color="#9CA3AF" />
+      </View>
     </TouchableOpacity>
   );
 }
@@ -194,6 +221,9 @@ export default function PremiumRequestScreen() {
   const navigation = useNavigation<Nav>();
   const route      = useRoute<Route>();
   const { token }  = useAuth();
+  const { colors: C } = useTheme();
+  const { lang } = useLanguage();
+  const isAr = lang === 'ar';
 
   const [step,            setStep]            = useState<'feature' | 'payment' | 'confirm'>('feature');
   const [features,        setFeatures]        = useState<PremiumFeature[]>([]);
@@ -230,7 +260,9 @@ export default function PremiumRequestScreen() {
       }
       if (bankRes.ok) {
         const bData: Bank[] = await bankRes.json();
-        if (bData.length) setBanks(bData);
+        if (bData.length) {
+          setBanks(normalizeBanks(bData));
+        }
       }
     } catch { /* keep defaults */ }
     finally { setFetching(false); }
@@ -324,11 +356,11 @@ export default function PremiumRequestScreen() {
   const stepLabels = ['اختر الميزة', 'ادفع وأرفق', 'أرسل الطلب'];
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: C.background }]}>
       {/* Header */}
       <LinearGradient colors={['#8B5CF6', '#7C3AED', '#EC4899']} style={styles.header} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-        <TouchableOpacity onPress={() => safeBack(navigation)} style={styles.backBtn}>
-          <Text style={styles.backBtnText}>←</Text>
+        <TouchableOpacity onPress={() => safeBack(navigation)} style={styles.backBtn} activeOpacity={0.8}>
+          <AppIcon name="arrowBack" size={22} color="#fff" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>💎 شحن المحفظة</Text>
@@ -337,13 +369,14 @@ export default function PremiumRequestScreen() {
         <TouchableOpacity 
           onPress={() => navigation.navigate('Spending')}
           style={styles.historyBtn}
+          activeOpacity={0.85}
         >
-          <Text style={styles.historyBtnText}>💳</Text>
+          <AppIcon name="wallet" size={18} color="#fff" />
         </TouchableOpacity>
       </LinearGradient>
 
       {/* Step indicator */}
-      <View style={styles.steps}>
+      <View style={[styles.steps, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
         {stepLabels.map((label, i) => (
           <React.Fragment key={i}>
             <View style={styles.stepItem}>
@@ -555,22 +588,20 @@ export default function PremiumRequestScreen() {
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  safe:          { flex: 1, backgroundColor: '#F8F9FF' },
+  safe:          { flex: 1 },
   centered:      { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
   scroll:        { flex: 1 },
   scrollContent: { padding: 16, paddingBottom: 40 },
 
   // Header
-  header:      { paddingTop: 8, paddingBottom: 16, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  backBtn:     { padding: 8 },
-  backBtnText: { color: '#fff', fontSize: 22, fontWeight: '600' },
-  historyBtn:     { padding: 8, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)' },
-  historyBtnText: { fontSize: 18 },
+  header:      { paddingTop: 10, paddingBottom: 18, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  backBtn:     { width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
+  historyBtn:     { width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
   headerTitle: { color: '#fff', fontSize: 18, fontWeight: '700' },
   headerSub:   { color: 'rgba(255,255,255,0.75)', fontSize: 12, marginTop: 2 },
 
   // Step indicator
-  steps:            { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#F0F0F5' },
+  steps:            { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1 },
   stepItem:         { alignItems: 'center', gap: 4 },
   stepCircle:       { width: 28, height: 28, borderRadius: 14, backgroundColor: '#E5E7EB', justifyContent: 'center', alignItems: 'center' },
   stepCircleActive: { backgroundColor: '#6D28D9' },
@@ -586,7 +617,7 @@ const styles = StyleSheet.create({
   sectionSub:   { fontSize: 12, color: '#6B7280', marginBottom: 10, marginTop: -4 },
 
   // Feature card
-  featureCard:         { backgroundColor: '#fff', borderRadius: 16, borderWidth: 2, borderColor: '#E5E7EB', padding: 14, marginBottom: 10 },
+  featureCard:         { backgroundColor: '#fff', borderRadius: 18, borderWidth: 1.5, borderColor: '#E5E7EB', padding: 14, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
   featureCardSelected: { borderColor: '#6D28D9', backgroundColor: '#F5F3FF' },
   featureCardDisabled: { opacity: 0.55 },
   featureCardRow:      { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -605,7 +636,7 @@ const styles = StyleSheet.create({
   soonBadgeText:       { color: '#fff', fontSize: 11, fontWeight: '800', letterSpacing: 0.5, textTransform: 'uppercase' },
 
   // Amount card
-  amountCard:            { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#E5E7EB' },
+  amountCard:            { backgroundColor: '#fff', borderRadius: 18, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#E5E7EB', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
   amountCardTitle:       { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 4 },
   amountCardSub:         { fontSize: 12, color: '#6B7280', marginBottom: 12 },
   amountInputRow:        { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
@@ -619,33 +650,35 @@ const styles = StyleSheet.create({
   quickAmountTextActive: { color: '#6D28D9' },
 
   // Payment card
-  paymentCard:            { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#E5E7EB' },
+  paymentCard:            { backgroundColor: '#fff', borderRadius: 18, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#E5E7EB', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
   paymentCardTitle:       { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 8 },
   paymentInstructions:    { fontSize: 13, color: '#374151', lineHeight: 20, marginBottom: 10 },
   paymentAmountHighlight: { color: '#6D28D9', fontWeight: '800' },
-  accountBox:             { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#F9FAFB', borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: '#E5E7EB' },
+  accountBox:             { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#F9FAFB', borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#E5E7EB' },
   accountDot:             { width: 12, height: 12, borderRadius: 6 },
   accountBank:            { fontSize: 12, color: '#6B7280', fontWeight: '600' },
   accountNumber:          { fontSize: 20, fontWeight: '800', color: '#111827', letterSpacing: 2 },
   paymentNote:            { fontSize: 12, color: '#D97706', backgroundColor: '#FFFBEB', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#FEF3C7', marginTop: 4 },
 
   // Banks
-  bankItem:         { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', borderRadius: 14, borderWidth: 1.5, borderColor: '#E5E7EB', paddingHorizontal: 14, paddingVertical: 12, marginBottom: 8 },
-  bankItemSelected: { borderColor: '#3B82F6', backgroundColor: '#EFF6FF' },
-  bankIcon:         { width: 36, height: 36, borderRadius: 10, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
-  bankIconText:     { fontSize: 18 },
+  bankItem:         { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 16, borderWidth: 1.5, borderColor: '#E5E7EB', paddingHorizontal: 14, paddingVertical: 14, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
+  bankItemSelected: { borderColor: '#2563EB', backgroundColor: '#EFF6FF' },
+  bankIcon:         { width: 40, height: 40, borderRadius: 14, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
+  bankIconSelected: { backgroundColor: '#DBEAFE' },
   bankInfo:         { flex: 1 },
   bankName:         { fontSize: 14, fontWeight: '600', color: '#111827' },
   bankNameSelected: { color: '#1D4ED8' },
   bankApp:          { fontSize: 11, color: '#9CA3AF', marginTop: 1 },
-  bankCheck:        { fontSize: 16, color: '#3B82F6', fontWeight: '700' },
+  bankRight:        { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  bankCheckPill:    { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#DBEAFE', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
+  bankCheckText:    { fontSize: 11, fontWeight: '700', color: '#1D4ED8' },
 
   // Screenshot
   screenshotContainer:     { position: 'relative', marginBottom: 16 },
   screenshotPreview:       { width: '100%', height: 200, borderRadius: 14, resizeMode: 'cover' },
   screenshotRemove:        { position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
   screenshotRemoveText:    { color: '#fff', fontSize: 12, fontWeight: '600' },
-  screenshotUploader:      { backgroundColor: '#fff', borderRadius: 16, borderWidth: 2, borderColor: '#D1D5DB', borderStyle: 'dashed', padding: 24, alignItems: 'center', marginBottom: 16 },
+  screenshotUploader:      { backgroundColor: '#fff', borderRadius: 18, borderWidth: 2, borderColor: '#D1D5DB', borderStyle: 'dashed', padding: 22, alignItems: 'center', marginBottom: 16 },
   screenshotUploaderTitle: { fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 12 },
   screenshotBtns:          { flexDirection: 'row', gap: 10 },
   screenshotBtn:           { backgroundColor: '#F3F4F6', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10 },
@@ -654,11 +687,11 @@ const styles = StyleSheet.create({
 
   // Navigation
   navRow:          { flexDirection: 'row', gap: 10, marginTop: 8, marginBottom: 8 },
-  nextBtn:         { backgroundColor: '#6D28D9', borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 12 },
+  nextBtn:         { backgroundColor: '#6D28D9', borderRadius: 16, paddingVertical: 14, alignItems: 'center', marginTop: 12, shadowColor: '#6D28D9', shadowOpacity: 0.25, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
   nextBtnFlex:     { flex: 1 },
   nextBtnDisabled: { backgroundColor: '#C4B5FD', opacity: 0.7 },
   nextBtnText:     { color: '#fff', fontSize: 15, fontWeight: '700' },
-  prevBtn:         { backgroundColor: '#F3F4F6', borderRadius: 14, paddingVertical: 12, paddingHorizontal: 20, alignItems: 'center', marginTop: 8 },
+  prevBtn:         { backgroundColor: '#F3F4F6', borderRadius: 16, paddingVertical: 12, paddingHorizontal: 20, alignItems: 'center', marginTop: 8 },
   prevBtnText:     { color: '#374151', fontSize: 14, fontWeight: '600' },
 
   // Summary

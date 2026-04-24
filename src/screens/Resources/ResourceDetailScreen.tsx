@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { AppIcon, type AppIconName } from '@/icons';
 import { Text } from '@/ui/Text';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Share, Platform, Linking } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Share, Platform, Linking, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -62,6 +62,11 @@ const TYPE_ICONS: Record<ResourceType, AppIconName> = {
   [ResourceType.VideoCourse]:  'playCircle',
 };
 
+// Feature toggle: hide AI Summary in production until officially launched.
+const AI_SUMMARY_ENABLED = false;
+// Feature toggle: hide AI Flashcards in production until officially launched.
+const AI_FLASHCARDS_ENABLED = false;
+
 const ResourceDetailScreen = () => {
   const navigation = useNavigation<Nav>();
   const { params: { resource } } = useRoute<Route>();
@@ -70,6 +75,22 @@ const ResourceDetailScreen = () => {
   const { colors: C } = useTheme();
   const styles = useMemo(() => makeStyles(C), [C]);
   const isAr = lang === 'ar';
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const heroScale = scrollY.interpolate({
+    inputRange: [-120, 0, 220],
+    outputRange: [1.06, 1, 0.94],
+    extrapolate: 'clamp',
+  });
+  const heroFade = scrollY.interpolate({
+    inputRange: [0, 140, 240],
+    outputRange: [1, 0.6, 0.25],
+    extrapolate: 'clamp',
+  });
+  const headerGlassOpacity = scrollY.interpolate({
+    inputRange: [0, 70, 130],
+    outputRange: [0, 0.35, 0.85],
+    extrapolate: 'clamp',
+  });
 
   const backToHomeIfRoot = useCallback(() => {
     const state = (navigation as any)?.getState?.();
@@ -284,57 +305,101 @@ const ResourceDetailScreen = () => {
 
   return (
     <View style={styles.root}>
-      {/* ── Hero header ── */}
-      <LinearGradient colors={gradient} style={styles.hero}>
-        <SafeAreaView edges={['top']}>
-          <View style={styles.headerRow}>
-            <TouchableOpacity onPress={backToHomeIfRoot} style={styles.backBtn}>
-              <AppIcon name={isAr ? 'arrowForward' : 'arrowBack'} size={20} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleShare} style={styles.backBtn}>
-              <AppIcon name="shareOutline" size={20} color="#fff" />
-            </TouchableOpacity>
-          </View>
+      {/* Ambient background */}
+      <LinearGradient
+        colors={[`${gradient[0]}22`, `${gradient[1]}12`, `${C.background}`]}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+        style={styles.ambient}
+      />
 
-          <View style={styles.heroBody}>
-            <View style={styles.iconWrap}>
-              <AppIcon name={TYPE_ICONS[resource.type]} size={38} color="#fff" />
-            </View>
-            <Text style={styles.heroTitle} numberOfLines={2}>
+      {/* Glass header overlay (appears on scroll) */}
+      <SafeAreaView edges={['top']} style={styles.glassHeaderSafe}>
+        <Animated.View style={[styles.glassHeader, { opacity: headerGlassOpacity }]}>
+          <View style={styles.glassHeaderInner}>
+            <Text style={styles.glassHeaderTitle} numberOfLines={1}>
               {resource.titleAr || resource.title}
             </Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{TYPE_LABELS[resource.type]}</Text>
-            </View>
           </View>
-        </SafeAreaView>
-      </LinearGradient>
+        </Animated.View>
+        <View style={styles.headerRowAbsolute}>
+          <TouchableOpacity onPress={backToHomeIfRoot} style={styles.backBtn}>
+            <AppIcon name={isAr ? 'arrowForward' : 'arrowBack'} size={20} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleShare} style={styles.backBtn}>
+            <AppIcon name="shareOutline" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
 
-      <ScrollView
+      <Animated.ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
+        scrollEventThrottle={16}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true },
+        )}
       >
-        {/* ── Meta pills ── */}
-        <View style={styles.pillsRow}>
-          <View style={styles.pill}>
-            <AppIcon name="bookOutline" size={13} color="#8B5CF6" />
-            <Text style={styles.pillText}>{resource.subject}</Text>
-          </View>
-          <View style={styles.pill}>
-            <AppIcon name="layersOutline" size={13} color="#8B5CF6" />
-            <Text style={styles.pillText}>{'السنة ' + resource.year}</Text>
-          </View>
-          {resource.fileType && (
-            <View style={styles.pill}>
-              <AppIcon name="documentOutline" size={13} color="#8B5CF6" />
-              <Text style={styles.pillText}>{resource.fileType.toUpperCase()}</Text>
+        {/* ── Hero header (parallax) ── */}
+        <Animated.View style={[styles.heroWrap, { transform: [{ scale: heroScale }], opacity: heroFade }]}>
+          <LinearGradient colors={gradient} style={styles.hero}>
+            {/* Decorative blobs */}
+            <View style={[styles.blob, styles.blobA]} />
+            <View style={[styles.blob, styles.blobB]} />
+            <View style={[styles.blob, styles.blobC]} />
+
+            <View style={styles.heroBody}>
+              <View style={styles.iconWrap}>
+                <LinearGradient
+                  colors={['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.10)']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.iconGlass}
+                >
+                  <AppIcon name={TYPE_ICONS[resource.type]} size={40} color="#fff" />
+                </LinearGradient>
+              </View>
+              <Text style={styles.heroTitle} numberOfLines={2}>
+                {resource.titleAr || resource.title}
+              </Text>
+              <View style={styles.heroMetaRow}>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{TYPE_LABELS[resource.type]}</Text>
+                </View>
+                <View style={[styles.badge, styles.badgeLight]}>
+                  <Text style={styles.badgeText} numberOfLines={1}>
+                    {resource.subject}{' · '}{'السنة ' + resource.year}
+                  </Text>
+                </View>
+              </View>
             </View>
-          )}
+          </LinearGradient>
+        </Animated.View>
+        {/* ── Meta pills ── */}
+        <View style={styles.metaCard}>
+          <View style={styles.pillsRow}>
+            <View style={styles.pill}>
+              <AppIcon name="bookOutline" size={13} color={gradient[0]} />
+              <Text style={[styles.pillText, { color: gradient[0] }]} numberOfLines={1}>{resource.subject}</Text>
+            </View>
+            <View style={styles.pill}>
+              <AppIcon name="layersOutline" size={13} color={gradient[0]} />
+              <Text style={[styles.pillText, { color: gradient[0] }]} numberOfLines={1}>{'السنة ' + resource.year}</Text>
+            </View>
+            {resource.fileType && (
+              <View style={styles.pill}>
+                <AppIcon name="documentOutline" size={13} color={gradient[0]} />
+                <Text style={[styles.pillText, { color: gradient[0] }]} numberOfLines={1}>{resource.fileType.toUpperCase()}</Text>
+              </View>
+            )}
+          </View>
         </View>
 
         {/* ── Description ── */}
         {!!resource.description && (
           <View style={styles.descCard}>
+            <Text style={styles.sectionTitle}>الوصف</Text>
             <Text style={styles.descText}>{resource.description}</Text>
           </View>
         )}
@@ -376,7 +441,7 @@ const ResourceDetailScreen = () => {
         {/* ── Star Rating ── */}
         <View style={styles.ratingCard}>
           <View style={styles.ratingHeader}>
-            <Text style={styles.ratingLabel}>قيّم هذا المورد</Text>
+            <Text style={styles.sectionTitle}>التقييم</Text>
             {ratingCount > 0 && (
               <Text style={styles.ratingAvg}>
                 ⭐ {avgRating?.toFixed(1)} ({ratingCount} {ratingCount === 1 ? 'تقييم' : 'تقييمات'})
@@ -403,18 +468,38 @@ const ResourceDetailScreen = () => {
 
         {/* ── Open file ── */}
         <TouchableOpacity
-          style={[styles.openBtn, { backgroundColor: gradient[0] }]}
+          style={styles.openBtn}
           onPress={openFile}
           activeOpacity={0.85}
         >
-          <AppIcon name={resource.type === ResourceType.VideoCourse ? 'play' : 'documentTextOutline'} size={20} color="#fff" />
-          <Text style={styles.openBtnText}>
-            {resource.type === ResourceType.VideoCourse ? 'مشاهدة الفيديو' : 'فتح الملف'}
-          </Text>
+          <LinearGradient
+            colors={[gradient[0], gradient[1]]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.openBtnGrad}
+          >
+            <View style={styles.openBtnLeft}>
+              <View style={styles.openBtnIcon}>
+                <AppIcon name={resource.type === ResourceType.VideoCourse ? 'play' : 'documentTextOutline'} size={20} color="#fff" />
+              </View>
+              <View style={styles.openBtnTextCol}>
+                <Text style={styles.openBtnText}>
+                  {resource.type === ResourceType.VideoCourse ? 'مشاهدة الفيديو' : 'فتح الملف'}
+                </Text>
+                <Text style={styles.openBtnSub} numberOfLines={1}>
+                  {resource.fileName ? resource.fileName : (resource.fileType ? resource.fileType.toUpperCase() : 'Studara')}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.openBtnHint}>
+              <Text style={styles.openBtnHintText}>عرض</Text>
+              <AppIcon name={isAr ? 'chevronBack' : 'chevronForward'} size={16} color="rgba(255,255,255,0.9)" />
+            </View>
+          </LinearGradient>
         </TouchableOpacity>
 
-        {/* ── Auto-generate flashcards ── */}
-        {!!token && (
+        {/* ── Auto-generate flashcards (Soon) ── */}
+        {!!token && AI_FLASHCARDS_ENABLED && (
           <TouchableOpacity
             style={[styles.flashBtn, flashDone && styles.flashBtnDone]}
             onPress={() => {
@@ -435,8 +520,8 @@ const ResourceDetailScreen = () => {
           </TouchableOpacity>
         )}
 
-        {/* ── AI Summary ── */}
-        {!!token && (
+        {/* ── AI Summary (Soon) ── */}
+        {!!token && AI_SUMMARY_ENABLED && (
           <TouchableOpacity
             style={[styles.summaryBtn, summaryDone && styles.summaryBtnDone]}
             onPress={() => { if (!summaryDone) summaryMutation.mutate(); }}
@@ -484,57 +569,138 @@ const ResourceDetailScreen = () => {
             <Text style={styles.deleteBtnText}>حذف</Text>
           </TouchableOpacity>
         )}
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 };
 
 const makeStyles = (C: typeof import('../../theme').Colors) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.background },
+  ambient: { ...StyleSheet.absoluteFillObject },
+
+  glassHeaderSafe: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 },
+  headerRowAbsolute: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  glassHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 64,
+  },
+  glassHeaderInner: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    height: 48,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: 'rgba(17,24,39,0.22)',
+    overflow: 'hidden',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+  },
+  glassHeaderTitle: {
+    color: 'rgba(255,255,255,0.94)',
+    fontWeight: '800',
+    fontSize: 13,
+    textAlign: 'center',
+  },
 
   /* Hero */
-  hero: { paddingBottom: 32 },
-  headerRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-  },
+  heroWrap: { marginBottom: 10 },
+  hero: { paddingBottom: 34, borderBottomLeftRadius: 28, borderBottomRightRadius: 28, overflow: 'hidden' },
   backBtn: {
     margin: 12, width: 36, height: 36, borderRadius: 18,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center', justifyContent: 'center',
   },
-  heroBody: { alignItems: 'center', paddingHorizontal: 24, paddingBottom: 8, gap: 12 },
+  heroBody: { alignItems: 'center', paddingHorizontal: 22, paddingTop: 84, paddingBottom: 14, gap: 12 },
   iconWrap: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: 84, height: 84, borderRadius: 42,
     alignItems: 'center', justifyContent: 'center',
   },
+  iconGlass: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 6,
+  },
   heroTitle: {
-    fontSize: 20, fontWeight: '800', color: '#fff',
-    textAlign: 'center', lineHeight: 28,
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#fff',
+    textAlign: 'center',
+    lineHeight: 30,
+    letterSpacing: 0.2,
+  },
+  heroMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 18,
   },
   badge: {
     backgroundColor: 'rgba(255,255,255,0.25)',
     paddingHorizontal: 14, paddingVertical: 5,
     borderRadius: 20,
   },
+  badgeLight: { backgroundColor: 'rgba(255,255,255,0.18)' },
   badgeText: { fontSize: 12, color: '#fff', fontWeight: '700' },
 
+  blob: { position: 'absolute', borderRadius: 999, opacity: 0.22 },
+  blobA: { width: 260, height: 260, backgroundColor: '#fff', top: -120, left: -90 },
+  blobB: { width: 200, height: 200, backgroundColor: '#000', top: -90, right: -70, opacity: 0.10 },
+  blobC: { width: 240, height: 240, backgroundColor: '#fff', bottom: -140, right: -90, opacity: 0.14 },
+
   /* Scroll */
-  scroll: { padding: 20, gap: 14, paddingBottom: 48 },
+  scroll: { padding: 18, gap: 14, paddingBottom: 72, paddingTop: 0 },
+
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: C.textSecondary,
+    textAlign: 'right',
+    marginBottom: 8,
+  },
 
   /* Pills */
+  metaCard: {
+    backgroundColor: C.surface,
+    borderRadius: 18,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: C.border,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
+  },
   pillsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
   pill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: '#EDE9FE',
+    backgroundColor: 'rgba(139,92,246,0.10)',
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+    maxWidth: '100%',
   },
-  pillText: { fontSize: 13, color: '#6D28D9', fontWeight: '600' },
+  pillText: { fontSize: 13, fontWeight: '700' },
 
   /* Description */
   descCard: {
     backgroundColor: C.surface, borderRadius: 16, padding: 16,
-    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
+    borderWidth: 1, borderColor: C.border,
+    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 10, elevation: 2,
   },
   descText: { fontSize: 14, color: C.textSecondary, textAlign: 'right', lineHeight: 24 },
 
@@ -552,11 +718,45 @@ const makeStyles = (C: typeof import('../../theme').Colors) => StyleSheet.create
 
   /* Open */
   openBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 10, borderRadius: 16, paddingVertical: 17,
-    shadowColor: '#8B5CF6', shadowOpacity: 0.3, shadowRadius: 12, elevation: 4,
+    borderRadius: 18,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
   },
+  openBtnGrad: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    gap: 10,
+  },
+  openBtnLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, paddingRight: 10 },
+  openBtnIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+  },
+  openBtnTextCol: { flex: 1, gap: 2 },
   openBtnText: { fontSize: 16, fontWeight: '800', color: '#fff' },
+  openBtnSub: { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.78)' },
+  openBtnHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  openBtnHintText: { fontSize: 12, fontWeight: '800', color: 'rgba(255,255,255,0.92)' },
 
   /* Flashcards auto */
   flashBtn: {
@@ -605,13 +805,20 @@ const makeStyles = (C: typeof import('../../theme').Colors) => StyleSheet.create
 
   /* Star Rating */
   ratingCard: {
-    backgroundColor: C.surface, borderRadius: 16, padding: 16, alignItems: 'center', gap: 8,
-    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
+    backgroundColor: C.surface,
+    borderRadius: 16,
+    padding: 16,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: C.border,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
   },
   ratingHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' },
-  ratingLabel: { fontSize: 13, fontWeight: '700', color: C.textSecondary },
   ratingAvg: { fontSize: 12, fontWeight: '600', color: '#F59E0B' },
-  starsRow: { flexDirection: 'row', gap: 8 },
+  starsRow: { flexDirection: 'row', gap: 8, alignSelf: 'center', justifyContent: 'center' },
   ratingNote: { fontSize: 13, color: '#F59E0B', fontWeight: '700' },
 });
 
