@@ -12,6 +12,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { Input, LogoMark } from '../../components/common';
 import { Colors, Gradients, Spacing, BorderRadius } from '../../theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PENDING_RESET_INTENT_KEY } from '../../constants/security';
+import { openWhatsAppSupport } from '../../constants/support';
 import {
   isBiometricAvailable, isBiometricEnabled, biometricLabel,
   authenticateWithBiometrics, getBiometricCredentials, saveBiometricCredentials,
@@ -101,6 +104,32 @@ const LoginScreen = () => {
       }
     })();
     return () => { cancelled = true; };
+  }, [lang]);
+
+  useEffect(() => {
+    // If a password-reset intent was tapped while logged out, show guidance once.
+    void (async () => {
+      const intentId = await AsyncStorage.getItem(PENDING_RESET_INTENT_KEY);
+      if (!intentId) return;
+      Alert.alert(
+        lang === 'fr' ? 'Action requise' : 'يلزم إجراء',
+        lang === 'fr'
+          ? "Pour approuver, ouvrez Studara sur un appareil où vous êtes déjà connecté. Si vous n'avez plus accès, contactez le support."
+          : 'للموافقة، افتح Studara على جهاز مسجّل الدخول. إذا لم يعد لديك وصول، تواصل مع الدعم.',
+        [
+          {
+            text: lang === 'fr' ? 'WhatsApp' : 'واتساب',
+            onPress: () => openWhatsAppSupport('Bonjour, je n’ai plus accès à mon compte Studara et je veux réinitialiser mon mot de passe.'),
+          },
+          {
+            text: lang === 'fr' ? 'OK' : 'حسناً',
+            style: 'cancel',
+          },
+        ],
+      );
+      // Clear so we don't re-alert every time.
+      await AsyncStorage.removeItem(PENDING_RESET_INTENT_KEY);
+    })().catch(() => {});
   }, [lang]);
 
   const handleBiometricLogin = useCallback(async () => {

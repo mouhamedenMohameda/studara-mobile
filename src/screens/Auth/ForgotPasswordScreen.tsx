@@ -13,6 +13,7 @@ import { Input } from '../../components/common';
 import { Colors, Gradients, Spacing, BorderRadius } from '../../theme';
 import { apiRequest } from '../../utils/api';
 import { safeBack } from '../../utils/safeBack';
+import { openWhatsAppSupport } from '../../constants/support';
 
 type Nav = StackNavigationProp<AuthStackParamList, 'ForgotPassword'>;
 
@@ -140,6 +141,17 @@ const ForgotPasswordScreen = () => {
           </View>
 
           <TouchableOpacity
+            onPress={() => openWhatsAppSupport('Bonjour, j’ai oublié mon mot de passe Studara et je n’ai aucun appareil déjà connecté. Pouvez-vous m’aider ?')}
+            activeOpacity={0.85}
+            style={styles.whatsBtn}
+          >
+            <AppIcon name="logoWhatsapp" size={18} color="#16A34A" />
+            <Text style={styles.whatsBtnText}>
+              {lang === 'fr' ? 'Contacter le support WhatsApp' : 'التواصل مع دعم واتساب'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             onPress={handleSubmit}
             disabled={loading}
             activeOpacity={0.85}
@@ -205,6 +217,19 @@ const styles = StyleSheet.create({
     borderRadius: 14, padding: 12, marginBottom: Spacing.lg,
   },
   infoText:   { flex: 1, fontSize: 12, color: Colors.textSecondary, lineHeight: 19, textAlign: 'right', fontWeight: '600' },
+  whatsBtn: {
+    height: 52,
+    borderRadius: BorderRadius.pill,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    backgroundColor: '#F0FDF4',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: Spacing.lg,
+  },
+  whatsBtnText: { color: '#166534', fontWeight: '900', fontSize: 14 },
   submitBtn:  { height: 56, alignItems: 'center', justifyContent: 'center', borderRadius: BorderRadius.pill },
   submitBtnText: { color: '#fff', fontSize: 16, fontWeight: '800', letterSpacing: 0.3 },
   cancelRow:  { alignItems: 'center', paddingTop: Spacing.lg },

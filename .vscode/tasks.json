@@ -1,0 +1,25 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Start Tawjeeh (Expo)",
+			"type": "shell",
+			"command": "npx expo start --clear",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "Start Admin Panel",
+			"type": "shell",
+			"command": "cd admin && node_modules/.bin/vite --port 5174",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "Perf Test API 500 users",
+			"type": "shell",
+			"command": "cd api && nohup npm run dev > /tmp/tawjeeh_api_perf.log 2>&1 & sleep 6 && curl -s -o /dev/null -w HEALTH_HTTP=%{http_code} http://localhost:3000/health && echo && npx autocannon -c 500 -d 30 -p 10 --renderStatusCodes http://localhost:3000/api/v1/resources",
+			"isBackground": false
+		}
+	]
+}
