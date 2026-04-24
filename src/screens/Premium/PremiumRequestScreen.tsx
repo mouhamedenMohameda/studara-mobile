@@ -71,6 +71,8 @@ const FEATURE_ICONS: Record<string, string> = {
   ai_course:      '📖',
 };
 
+const ENABLED_FEATURE_KEYS = new Set<string>(['whisper_studio']);
+
 // ── Balance bar ───────────────────────────────────────────────────────────────
 function BalanceBar({ feature }: { feature: PremiumFeature }) {
   const total   = feature.totalToppedUpMru;
@@ -114,16 +116,26 @@ const barStyles = StyleSheet.create({
 });
 
 // ── Feature card ──────────────────────────────────────────────────────────────
-function FeatureCard({ feature, selected, onSelect }: {
-  feature: PremiumFeature; selected: boolean; onSelect: () => void;
+function FeatureCard({ feature, selected, onSelect, disabled }: {
+  feature: PremiumFeature; selected: boolean; onSelect: () => void; disabled?: boolean;
 }) {
   const icon = FEATURE_ICONS[feature.key] ?? '⭐';
   return (
     <TouchableOpacity
-      style={[styles.featureCard, selected && styles.featureCardSelected]}
+      style={[
+        styles.featureCard,
+        selected && styles.featureCardSelected,
+        disabled && styles.featureCardDisabled,
+      ]}
       onPress={onSelect}
+      disabled={!!disabled}
       activeOpacity={0.8}
     >
+      {disabled && (
+        <View style={styles.soonBadge}>
+          <Text style={styles.soonBadgeText}>soon</Text>
+        </View>
+      )}
       <View style={styles.featureCardRow}>
         <View style={[styles.featureIcon, selected && styles.featureIconSelected]}>
           <Text style={styles.featureIconText}>{icon}</Text>
@@ -133,7 +145,11 @@ function FeatureCard({ feature, selected, onSelect }: {
           <Text style={styles.featureCardDesc} numberOfLines={2}>{feature.description_ar}</Text>
           <Text style={styles.featureCost}>💳 {feature.cost_per_use_mru} أوقية / استخدام</Text>
         </View>
-        <View style={[styles.featureRadio, selected && styles.featureRadioSelected]}>
+        <View style={[
+          styles.featureRadio,
+          selected && styles.featureRadioSelected,
+          disabled && styles.featureRadioDisabled,
+        ]}>
           {selected && <View style={styles.featureRadioDot} />}
         </View>
       </View>
@@ -205,7 +221,7 @@ export default function PremiumRequestScreen() {
         setFeatures(data);
         if (preselectedKey) {
           const found = data.find(f => f.key === preselectedKey);
-          if (found) {
+          if (found && ENABLED_FEATURE_KEYS.has(found.key)) {
             setSelectedFeature(found);
             setTopupAmount(String(found.min_recharge_mru ?? 100));
             setStep('payment');
@@ -354,7 +370,12 @@ export default function PremiumRequestScreen() {
                   key={f.key}
                   feature={f}
                   selected={selectedFeature?.key === f.key}
-                  onSelect={() => { setSelectedFeature(f); setTopupAmount(String(f.min_recharge_mru ?? 100)); }}
+                  disabled={!ENABLED_FEATURE_KEYS.has(f.key)}
+                  onSelect={() => {
+                    if (!ENABLED_FEATURE_KEYS.has(f.key)) return;
+                    setSelectedFeature(f);
+                    setTopupAmount(String(f.min_recharge_mru ?? 100));
+                  }}
                 />
               ))}
               <TouchableOpacity
@@ -567,6 +588,7 @@ const styles = StyleSheet.create({
   // Feature card
   featureCard:         { backgroundColor: '#fff', borderRadius: 16, borderWidth: 2, borderColor: '#E5E7EB', padding: 14, marginBottom: 10 },
   featureCardSelected: { borderColor: '#6D28D9', backgroundColor: '#F5F3FF' },
+  featureCardDisabled: { opacity: 0.55 },
   featureCardRow:      { flexDirection: 'row', alignItems: 'center', gap: 12 },
   featureIcon:         { width: 44, height: 44, borderRadius: 12, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
   featureIconSelected: { backgroundColor: '#EDE9FE' },
@@ -577,7 +599,10 @@ const styles = StyleSheet.create({
   featureCost:         { fontSize: 12, color: '#6D28D9', fontWeight: '600', marginTop: 4 },
   featureRadio:        { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: '#D1D5DB', justifyContent: 'center', alignItems: 'center' },
   featureRadioSelected:{ borderColor: '#6D28D9' },
+  featureRadioDisabled:{ borderColor: '#D1D5DB' },
   featureRadioDot:     { width: 10, height: 10, borderRadius: 5, backgroundColor: '#6D28D9' },
+  soonBadge:           { position: 'absolute', top: 10, left: 10, backgroundColor: '#111827', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+  soonBadgeText:       { color: '#fff', fontSize: 11, fontWeight: '800', letterSpacing: 0.5, textTransform: 'uppercase' },
 
   // Amount card
   amountCard:            { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#E5E7EB' },
