@@ -29,6 +29,9 @@ import PasswordResetSetNewPasswordScreen from '../screens/Security/PasswordReset
 import AISummaryImportScreen from '../screens/AISummaries/AISummaryImportScreen';
 import AISummaryOptionsScreen from '../screens/AISummaries/AISummaryOptionsScreen';
 import AISummaryResultScreen from '../screens/AISummaries/AISummaryResultScreen';
+import AIExerciseImportScreen from '../screens/AIExerciseCorrection/AIExerciseImportScreen';
+import AIExerciseOptionsScreen from '../screens/AIExerciseCorrection/AIExerciseOptionsScreen';
+import AIExerciseResultScreen from '../screens/AIExerciseCorrection/AIExerciseResultScreen';
 import { apiRequest } from '../utils/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PENDING_RESET_INTENT_KEY } from '../constants/security';
@@ -129,6 +132,27 @@ const RootNavigator = () => {
         <Stack.Screen
           name="AISummaryResult"
           component={AISummaryResultScreen}
+          options={{ animation: 'slide_from_right' }}
+        />
+      )}
+      {isAuthenticated && (
+        <Stack.Screen
+          name="AIExerciseImport"
+          component={AIExerciseImportScreen}
+          options={{ animation: 'slide_from_right' }}
+        />
+      )}
+      {isAuthenticated && (
+        <Stack.Screen
+          name="AIExerciseOptions"
+          component={AIExerciseOptionsScreen}
+          options={{ animation: 'slide_from_right' }}
+        />
+      )}
+      {isAuthenticated && (
+        <Stack.Screen
+          name="AIExerciseResult"
+          component={AIExerciseResultScreen}
           options={{ animation: 'slide_from_right' }}
         />
       )}

@@ -363,6 +363,40 @@ curl -i http://127.0.0.1:3000/health
 
 > Sécurité: évite de partager des mots de passe/keys dans le chat ou dans Git. Utilise des clés SSH et change tout secret exposé.
 
+### 4) Exécuter une migration SQL Postgres à la main (exemple : `040_ai_exercise_document_metrics_wallet.sql`)
+
+Le script `studara-admin/deploy/deploy.sh` applique normalement **toutes** les migrations du dossier `studara-admin/src/db/migrations/`. Si tu dois appliquer **une seule** migration (nouvelle base, rollback partiel, ou correctif avant le prochain déploiement), tu peux lancer le fichier SQL directement avec `psql`.
+
+1. Va dans le dépôt **backend** (`studara-admin`), pas le dossier mobile.
+2. Assure-toi d’avoir l’URL de connexion Postgres (souvent la même que `DATABASE_URL` dans `.env` de l’API).
+
+**En local ou depuis ta machine** (recommandé si `DATABASE_URL` est exportée) :
+
+```bash
+cd /chemin/vers/studara-admin
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f src/db/migrations/040_ai_exercise_document_metrics_wallet.sql
+```
+
+**Sur le VPS** (après `ssh`, si tu n’utilises pas la variable d’environnement) :
+
+```bash
+cd /var/www/studara/api
+# Charge les variables du .env puis exécute la migration
+set -a && source .env && set +a
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f src/db/migrations/040_ai_exercise_document_metrics_wallet.sql
+```
+
+**Sans `DATABASE_URL`** (paramètres explicites) :
+
+```bash
+psql -h HOST -p 5432 -U UTILISATEUR -d NOM_BASE -v ON_ERROR_STOP=1 -f src/db/migrations/040_ai_exercise_document_metrics_wallet.sql
+```
+
+- `-v ON_ERROR_STOP=1` : arrête au premier erreur SQL.
+- Après succès : redémarre l’API si besoin (`pm2 reload studara-api`) pour que les nouvelles colonnes / la clé `ai_exercise_correction` dans `premium_features` soient bien utilisées par le code déjà déployé.
+
+Pour une **autre** migration, remplace uniquement le nom du fichier `.sql` dans la commande `-f`.
+
 ---
 
 ## Roadmap

@@ -54,8 +54,9 @@ export async function apiRequest<T = unknown>(
         : data?.error?.fieldErrors
           ? Object.values(data.error.fieldErrors).flat().join(' — ')
           : `HTTP ${res.status}`;
-    const err = new Error(msg) as Error & { status?: number };
+    const err = new Error(msg) as Error & { status?: number; body?: unknown };
     err.status = res.status;
+    err.body = data;
     throw err;
   }
 
@@ -85,8 +86,9 @@ export async function apiUpload<T = unknown>(
   if (!res.ok) {
     const msg =
       typeof data?.error === 'string' ? data.error : `HTTP ${res.status}`;
-    const err = new Error(msg) as Error & { status?: number };
+    const err = new Error(msg) as Error & { status?: number; body?: unknown };
     err.status = res.status;
+    err.body = data;
     throw err;
   }
 

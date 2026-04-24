@@ -13,6 +13,9 @@ import { Colors, Gradients, Spacing, BorderRadius } from '../../theme';
 import { useTheme } from '../../context/ThemeContext';
 import { scheduleDailyFlashcardDigest } from '../../utils/notifications';
 import { getStudyStreak, getTodayStudiedCount, getDailyStudyGoal, getLast7DaysActivity, getRecentlyViewedResources, getTodayFocusMinutes, getLastNDaysActivity, ViewedResource, getStreakFreezeCount, getStreakTier, getNextTierTarget, STREAK_TIERS, StreakTier } from '../../utils/offlineStorage';
+import { FeatureCard } from '@/components/cards/FeatureCard';
+import { GlassKpiCard } from '@/components/cards/GlassKpiCard';
+import { GlassChip } from '@/components/cards/GlassChip';
 
 import { apiRequest } from '../../utils/api';
 import { useQuery } from '@tanstack/react-query';
@@ -221,6 +224,21 @@ export default function HomeScreen() {
         else navigation.navigate('AISummaryImport' as any);
       },
     },
+    {
+      key: 'ai_exercise_correction',
+      icon: 'schoolOutline' as const,
+      color: '#2563EB',
+      gradientColors: ['#2563EB', '#0EA5E9'] as [string, string],
+      label: lang === 'ar' ? '✅ تصحيح تمارين' : '✅ Correction IA',
+      description: lang === 'ar' ? 'صورة/نص → حل مفصل + PDF' : 'Photo/texte → correction + PDF',
+      emoji: '✅',
+      disabled: false,
+      onPress: () => {
+        const root = (navigation as any)?.getParent?.()?.getParent?.();
+        if (root?.navigate) root.navigate('AIExerciseImport');
+        else navigation.navigate('AIExerciseImport' as any);
+      },
+    },
   ], [lang, navigation, t]);
 
   const COMMUNITY_TILES = useMemo(() => [
@@ -302,68 +320,38 @@ export default function HomeScreen() {
 
               {/* Main stats (more legible) */}
               <View style={styles.focusStatsRow}>
-                <TouchableOpacity
-                  style={styles.focusStat}
-                  onPress={() => goToExplore('Resources')}
-                  activeOpacity={0.78}
-                >
-                  <View style={styles.focusStatIcon}>
-                    <AppIcon name="library" size={16} color="#fff" />
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={styles.focusStatValue}>{summary?.totalResources ?? 0}</Text>
-                    <Text
-                      style={[styles.focusStatLabel, isRTL && styles.rtlText]}
-                      numberOfLines={2}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.85}
-                    >
-                      {t('home.stat.resources')}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.focusStat}
-                  onPress={() => goToExplore('Reminders')}
-                  activeOpacity={0.78}
-                >
-                  <View style={styles.focusStatIcon}>
-                    <AppIcon name="alarm" size={16} color="#fff" />
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={styles.focusStatValue}>{summary?.todayReminders?.length ?? 0}</Text>
-                    <Text
-                      style={[styles.focusStatLabel, isRTL && styles.rtlText]}
-                      numberOfLines={2}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.85}
-                    >
-                      {t('home.stat.reminders')}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.focusStat}
-                  onPress={() => goToExplore('Flashcards')}
-                  activeOpacity={0.78}
-                >
-                  <View style={styles.focusStatIcon}>
-                    <AppIcon name="albums" size={16} color="#fff" />
-                  </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={styles.focusStatValue}>{summary?.dueCards ?? 0}</Text>
-                    <Text
-                      style={[styles.focusStatLabel, isRTL && styles.rtlText]}
-                      numberOfLines={2}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.85}
-                    >
-                      {t('home.stat.cards')}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
+                {([
+                  {
+                    key: 'resources',
+                    icon: 'library' as const,
+                    value: summary?.totalResources ?? 0,
+                    label: t('home.stat.resources'),
+                    onPress: () => goToExplore('Resources'),
+                  },
+                  {
+                    key: 'reminders',
+                    icon: 'alarm' as const,
+                    value: summary?.todayReminders?.length ?? 0,
+                    label: t('home.stat.reminders'),
+                    onPress: () => goToExplore('Reminders'),
+                  },
+                  {
+                    key: 'cards',
+                    icon: 'albums' as const,
+                    value: summary?.dueCards ?? 0,
+                    label: t('home.stat.cards'),
+                    onPress: () => goToExplore('Flashcards'),
+                  },
+                ]).map((kpi) => (
+                  <GlassKpiCard
+                    key={kpi.key}
+                    icon={kpi.icon}
+                    value={kpi.value}
+                    label={kpi.label}
+                    onPress={kpi.onPress}
+                    rtl={isRTL}
+                  />
+                ))}
               </View>
 
               {/* XP + streak + next exam row */}
@@ -375,44 +363,33 @@ export default function HomeScreen() {
                       const tierInfo = STREAK_TIERS.find(t => t.tier === streakTier);
                       const next = getNextTierTarget(streak);
                       return (
-                        <View style={styles.extraChip}>
-                          <Text style={styles.extraChipText}>
-                            {tierInfo ? tierInfo.emoji + ' ' : (streak >= 7 ? '🔥🔥' : '🔥') + ' '}
-                            {streak} {lang === 'ar' ? 'يوم' : 'j'}
-                            {freezeCount > 0 ? '  ❄️' : ''}
-                          </Text>
-                          {next && streak < next.target && (
-                            <Text style={[styles.extraChipText, { fontSize: 10, opacity: 0.65 }]}>
-                              {next.target - streak} {lang === 'ar' ? 'يوماً لـ' : 'j →'}{next.emoji}
-                            </Text>
-                          )}
-                        </View>
+                        <GlassChip
+                          text={
+                            <>
+                              {tierInfo ? tierInfo.emoji + ' ' : (streak >= 7 ? '🔥🔥' : '🔥') + ' '}
+                              {streak} {lang === 'ar' ? 'يوم' : 'j'}
+                              {freezeCount > 0 ? '  ❄️' : ''}
+                            </>
+                          }
+                          subText={
+                            next && streak < next.target
+                              ? `${next.target - streak} ${lang === 'ar' ? 'يوماً لـ' : 'j →'}${next.emoji}`
+                              : undefined
+                          }
+                        />
                       );
                     })()}
                     {(summary?.xp ?? 0) > 0 && (
-                      <View style={styles.extraChip}>
-                        <Text style={styles.extraChipText}>
-                          ⭐ {summary!.xp} XP
-                        </Text>
-                      </View>
+                      <GlassChip text={`⭐ ${summary!.xp} XP`} />
                     )}
                     {todayFocus > 0 && (
-                      <View style={styles.extraChip}>
-                        <Text style={styles.extraChipText}>
-                          🍅 {todayFocus} {lang === 'ar' ? 'دقيقة' : 'min'}
-                        </Text>
-                      </View>
+                      <GlassChip text={`🍅 ${todayFocus} ${lang === 'ar' ? 'دقيقة' : 'min'}`} />
                     )}
                     {summary?.nextExam && (
-                      <TouchableOpacity
-                        style={styles.extraChip}
+                      <GlassChip
+                        text={`📅 ${summary.nextExam.subject} · ${summary.nextExam.daysLeft}${lang === 'ar' ? 'ي' : 'j'}`}
                         onPress={() => goToTab('Profile')}
-                        activeOpacity={0.75}
-                      >
-                        <Text style={styles.extraChipText}>
-                          📅 {summary.nextExam.subject} · {summary.nextExam.daysLeft}{lang === 'ar' ? 'ي' : 'j'}
-                        </Text>
-                      </TouchableOpacity>
+                      />
                     )}
                   </View>
                 ) : null;
@@ -520,44 +497,27 @@ export default function HomeScreen() {
                   {lang === 'ar' ? 'الذكاء الاصطناعي' : 'Intelligence Artificielle'}
                 </Text>
               </View>
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                {AI_TILES.map(tile => (
-                  <TouchableOpacity
-                    key={tile.key}
-                    style={styles.aiTile}
-                    onPress={tile.disabled ? undefined : tile.onPress}
-                    disabled={tile.disabled}
-                    activeOpacity={0.82}
-                  >
-                    <LinearGradient
-                      colors={tile.gradientColors}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.aiTileGradient}
-                    >
-                      {tile.badge ? (
-                        <View style={styles.aiTileBadgeWrap} pointerEvents="none">
-                          <Text style={styles.aiTileBadgeText}>{tile.badge}</Text>
-                        </View>
-                      ) : null}
-                      <Text style={styles.aiTileEmoji}>{tile.emoji}</Text>
-                      <View style={{ flex: 1, minWidth: 0, paddingRight: tile.badge ? 56 : 0 }}>
-                        <Text
-                          style={styles.aiTileLabel}
-                          numberOfLines={1}
-                          adjustsFontSizeToFit
-                          minimumFontScale={0.75}
-                        >
-                          {tile.label}
-                        </Text>
-                        <Text style={styles.aiTileDesc} numberOfLines={2}>
-                          {tile.description}
-                        </Text>
-                      </View>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={{ marginHorizontal: -Spacing.lg }}
+              >
+                <View style={{ flexDirection: 'row', paddingHorizontal: Spacing.lg, gap: 10 }}>
+                  {AI_TILES.map(tile => (
+                    <FeatureCard
+                      key={tile.key}
+                      title={tile.label}
+                      description={tile.description}
+                      badgeText={tile.badge}
+                      gradientColors={tile.gradientColors}
+                      disabled={tile.disabled}
+                      onPress={tile.onPress}
+                      width={260}
+                      left={<Text style={{ fontSize: 22 }}>{tile.emoji}</Text>}
+                    />
+                  ))}
+                </View>
+              </ScrollView>
             </View>
           )}
 
@@ -883,50 +843,10 @@ const makeStyles = (C: typeof Colors) => StyleSheet.create({
     gap: 10,
     marginTop: 4,
   },
-  focusStat: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
-  },
-  focusStatIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
-    backgroundColor: 'rgba(0,0,0,0.14)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  focusStatValue: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: -0.6,
-    lineHeight: 22,
-  },
-  focusStatLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: 'rgba(255,255,255,0.86)',
-    letterSpacing: 0,
-    textTransform: 'none',
-    marginTop: 2,
-    lineHeight: 13,
-  },
+  // focusStat* moved to `GlassKpiCard`
 
-  focusExtraRow:   { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 14 },
-  extraChip:       {
-    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.32)',
-  },
-  extraChipText:   { fontSize: 12, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.2 },
+  focusExtraRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 14 },
+  // extraChip* moved to `GlassChip`
 
   /* Daily Goal + Activity Dots */
   focusGoalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, gap: 12 },
@@ -1030,34 +950,7 @@ const makeStyles = (C: typeof Colors) => StyleSheet.create({
   homeTabBadgeText: { fontSize: 11, fontWeight: '900', color: '#FFFFFF' },
 
   /* AI tiles */
-  aiTile: {
-    flex: 1,
-    borderRadius: 22,
-    overflow: 'hidden',
-    shadowColor: '#7C3AED', shadowOpacity: 0.25, shadowRadius: 16, shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
-  },
-  aiTileGradient: {
-    position: 'relative',
-    flexDirection: 'row', alignItems: 'center',
-    padding: 16, gap: 10,
-    minHeight: 92,
-  },
-  aiTileEmoji: { fontSize: 28 },
-  aiTileLabel: { fontSize: 15, fontWeight: '900', color: '#FFFFFF', letterSpacing: -0.2 },
-  aiTileDesc:  { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.88)', marginTop: 3 },
-  aiTileBadgeWrap: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.28)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.45)',
-  },
-  aiTileBadgeText: { fontSize: 10, fontWeight: '900', color: '#FFFFFF', letterSpacing: 0.5 },
+  // AI cards now use `FeatureCard` (kept styles removed)
 
   /* Community tiles */
   communityTile: {

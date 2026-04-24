@@ -86,9 +86,10 @@ const FEATURE_ICONS: Record<string, string> = {
   whisper_studio: '🎙️',
   ai_flashcards:  '🃏',
   ai_course:      '📖',
+  ai_exercise_correction: '✨',
 };
 
-const ENABLED_FEATURE_KEYS = new Set<string>(['whisper_studio']);
+const ENABLED_FEATURE_KEYS = new Set<string>(['whisper_studio', 'ai_exercise_correction']);
 
 // ── Balance bar ───────────────────────────────────────────────────────────────
 function BalanceBar({ feature }: { feature: PremiumFeature }) {

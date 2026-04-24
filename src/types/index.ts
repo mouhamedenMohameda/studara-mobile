@@ -152,6 +152,9 @@ export type RootStackParamList = {
   AISummaryImport: undefined;
   AISummaryOptions: { documentId: string };
   AISummaryResult: { summaryId: string };
+  AIExerciseImport: undefined;
+  AIExerciseOptions: { documentId: string };
+  AIExerciseResult: { correctionId: string };
 };
 
 export type AuthStackParamList = {
