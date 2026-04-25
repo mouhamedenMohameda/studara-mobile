@@ -18,6 +18,7 @@ import AcademicStructurePage from './pages/AcademicStructurePage';
 import PremiumRequestsPage   from './pages/PremiumRequestsPage';
 import AIChatUsagePage       from './pages/AIChatUsagePage';
 import SubscriptionsPage     from './pages/SubscriptionsPage';
+import FeatureFlagsPage      from './pages/FeatureFlagsPage';
 import Layout         from './components/Layout';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -160,6 +161,15 @@ export default function App() {
           element={
             <RequireAuth>
               <Layout><SubscriptionsPage /></Layout>
+            </RequireAuth>
+          }
+        />
+
+        <Route
+          path="/feature-flags"
+          element={
+            <RequireAuth>
+              <Layout><FeatureFlagsPage /></Layout>
             </RequireAuth>
           }
         />

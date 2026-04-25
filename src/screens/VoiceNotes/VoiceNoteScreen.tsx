@@ -61,6 +61,8 @@ import { useAccessibility } from '../../context/AccessibilityContext';
 import { RootStackParamList, VoiceNote } from '../../types';
 import { API_BASE } from '../../utils/api';
 import { notifyWalletSpent } from '../../utils/walletUtils';
+import { computePaygChargeMru } from '@/utils/paygCharge';
+import { getPaygFeature } from '@/constants/paygFeatures';
 import { Colors, BorderRadius, Gradients, Shadows, Spacing } from '../../theme';
 import { usePremiumFeature } from '../../hooks/usePremiumFeature';
 import PremiumGate from '../../components/common/PremiumGate';
@@ -595,10 +597,14 @@ export default function VoiceNoteScreen() {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      // Notifier qu'une transcription va coûter de l'argent
+      // Notifier le débit PAYG (exactement selon la grille de prix affichée)
       const minutes = Math.max(1, Math.ceil(finalDuration / 60));
-      const estimatedCost = minutes * 2; // Estimation basique
-      notifyWalletSpent('whisper_studio', estimatedCost);
+      const chargeMru = computePaygChargeMru({
+        featureKey: 'whisper_studio',
+        modelKey: transcriptionModel,
+        minutes,
+      });
+      if (chargeMru > 0) notifyWalletSpent('whisper_studio', chargeMru);
 
       // Rafraîchir la liste — la note est en "processing", on poll jusqu'à "done"
       await fetchNotes();
@@ -1089,13 +1095,23 @@ export default function VoiceNoteScreen() {
               snapToAlignment="start"
               contentContainerStyle={styles.modelCarouselContent}
             >
-              {([
-                { key: 'gpt-4o-transcribe',      label: 'GPT-4o',       badge: '⭐', price: '0.70', color: '#6366F1', desc: isAr ? 'أعلى جودة'  : 'Top qualité'  },
-                { key: 'gpt-4o-mini-transcribe', label: 'GPT-4o Mini',  badge: '⚡', price: '0.35', color: '#8B5CF6', desc: isAr ? 'اقتصادي'   : 'Économique'   },
-                { key: 'groq-whisper',           label: 'Groq',         badge: '🔊', price: '0.15', color: '#10B981', desc: isAr ? 'سريع'      : 'Rapide'       },
-                { key: 'google-chirp',           label: 'Chirp 2',      badge: '🔵', price: '0.50', color: '#0EA5E9', desc: isAr ? 'جوجل'      : 'Google'       },
-              ] as const).map(m => {
+              {(() => {
+                const whisper = getPaygFeature('whisper_studio');
+                const priceByModel: Record<string, number> = {};
+                for (const p of whisper?.pricing ?? []) {
+                  if (p.unit === 'per_minute' && typeof p.priceMru === 'number') priceByModel[p.modelKey] = p.priceMru;
+                }
+                const fmt = (n: number) => (n < 0.1 ? n.toFixed(3) : n.toFixed(2)).replace(/0+$/, '').replace(/\.$/, '');
+                const models = [
+                  { key: 'gpt-4o-transcribe',      label: 'GPT-4o',      badge: '⭐', color: '#6366F1', desc: isAr ? 'أعلى جودة'  : 'Top qualité' },
+                  { key: 'gpt-4o-mini-transcribe', label: 'GPT-4o Mini', badge: '⚡', color: '#8B5CF6', desc: isAr ? 'اقتصادي'   : 'Économique' },
+                  { key: 'groq-whisper',           label: 'Groq',        badge: '🔊', color: '#10B981', desc: isAr ? 'سريع'      : 'Rapide' },
+                  { key: 'google-chirp',           label: 'Chirp 2',     badge: '🔵', color: '#0EA5E9', desc: isAr ? 'جوجل'      : 'Google' },
+                ] as const;
+
+                return models.map((m) => {
                 const active = transcriptionModel === m.key;
+                const price = priceByModel[m.key] ?? null;
                 return (
                   <TouchableOpacity
                     key={m.key}
@@ -1105,10 +1121,13 @@ export default function VoiceNoteScreen() {
                     <Text style={styles.modelCarouselBadge}>{m.badge}</Text>
                     <Text style={[styles.modelCarouselLabel, active && { color: m.color }]}>{m.label}</Text>
                     <Text style={[styles.modelCarouselDesc, active && { color: m.color }]}>{m.desc}</Text>
-                    <Text style={[styles.modelCarouselPrice, active && { color: m.color }]}>{m.price} MRU/min</Text>
+                    <Text style={[styles.modelCarouselPrice, active && { color: m.color }]}>
+                      {price == null ? '—' : fmt(price)} MRU/min
+                    </Text>
                   </TouchableOpacity>
                 );
-              })}
+                });
+              })()}
             </ScrollView>
 
             <View style={styles.langDiarizeRow}>

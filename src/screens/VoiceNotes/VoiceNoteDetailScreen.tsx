@@ -28,6 +28,7 @@ import {
 } from '../../types';
 import { API_BASE } from '../../utils/api';
 import { notifyWalletSpent } from '../../utils/walletUtils';
+import { computePaygChargeMru } from '@/utils/paygCharge';
 import { Colors, BorderRadius, Gradients, Shadows, Spacing } from '../../theme';
 import { usePremiumFeature } from '../../hooks/usePremiumFeature';
 import PremiumGate from '../../components/common/PremiumGate';
@@ -599,9 +600,20 @@ export default function VoiceNoteDetailScreen() {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      // Notifier le coût de l'enhancement
-      const enhancementCost = 5; // Coût estimé de l'enhancement IA
-      notifyWalletSpent('whisper_studio', enhancementCost);
+      // Notifier le débit PAYG (exactement selon la grille de prix affichée)
+      // - flashcards → ai_flashcards
+      // - course     → ai_course
+      // - autres actions Whisper (summary/rewrite) restent sur whisper_studio
+      const paygFeatureKey =
+        mode === 'flashcards' ? 'ai_flashcards'
+        : mode === 'course' ? 'ai_course'
+        : 'whisper_studio';
+
+      const chargeMru = computePaygChargeMru({
+        featureKey: paygFeatureKey as any,
+        uses: 1,
+      });
+      if (chargeMru > 0) notifyWalletSpent(paygFeatureKey, chargeMru);
 
       setResultMode(mode);
       setCompletedModes(prev => new Set(prev).add(mode));

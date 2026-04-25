@@ -91,6 +91,34 @@ export default function HomeScreen() {
     enabled: !!token,
   });
 
+  const [paygActiveByKey, setPaygActiveByKey] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    if (!token) return;
+    apiRequest<any[]>('/billing/features', { token })
+      .then((rows) => {
+        const map: Record<string, boolean> = {};
+        for (const r of Array.isArray(rows) ? rows : []) {
+          map[String(r.key)] = !!r.is_active;
+        }
+        setPaygActiveByKey(map);
+      })
+      .catch(() => {});
+  }, [token]);
+
+  const [appActiveByKey, setAppActiveByKey] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    if (!token) return;
+    apiRequest<any[]>('/billing/app-features', { token })
+      .then((rows) => {
+        const map: Record<string, boolean> = {};
+        for (const r of Array.isArray(rows) ? rows : []) {
+          map[String(r.key)] = !!r.is_active;
+        }
+        setAppActiveByKey(map);
+      })
+      .catch(() => {});
+  }, [token]);
+
   // Load local streak from AsyncStorage on every focus
   useFocusEffect(useCallback(() => {
     getStudyStreak().then(s => {
@@ -148,42 +176,49 @@ export default function HomeScreen() {
       key: 'resources', icon: 'library' as const, color: Colors.modules.resources,
       label: t('home.nav.resources'),
       badge: summary?.totalResources ? `${summary.totalResources}` : undefined,
+      disabled: !(appActiveByKey.resources ?? true),
       onPress: () => goToExplore('Resources'),
     },
     {
       key: 'timetable', icon: 'calendar' as const, color: Colors.modules.timetable,
       label: t('home.nav.timetable'),
+      disabled: !(appActiveByKey.timetable ?? true),
       onPress: () => goToExplore('Timetable'),
     },
     {
       key: 'flashcards', icon: 'albums' as const, color: Colors.modules.flashcards,
       label: t('home.nav.flashcards'),
       badge: summary?.dueCards ? `${summary.dueCards}` : undefined,
+      disabled: !(appActiveByKey.flashcards ?? true),
       onPress: () => goToExplore('Flashcards'),
     },
     {
       key: 'reminders', icon: 'alarm' as const, color: Colors.modules.reminders,
       label: t('home.nav.reminders'),
       badge: summary?.todayReminders?.length ? `${summary.todayReminders.length}` : undefined,
+      disabled: !(appActiveByKey.reminders ?? true),
       onPress: () => goToExplore('Reminders'),
     },
     {
       key: 'focus', icon: 'timerOutline' as const, color: '#EF4444',
       label: lang === 'ar' ? '🍅 تركيز' : '🍅 Focus',
       badge: todayFocus > 0 ? `${todayFocus}${lang === 'ar' ? 'د' : 'm'}` : undefined,
+      disabled: !(appActiveByKey.focus ?? true),
       onPress: () => navigation.navigate('Pomodoro' as any),
     },
     {
       key: 'daily', icon: 'gameControllerOutline' as const, color: '#7C3AED',
       label: lang === 'ar' ? '🎲 تحدي اليوم' : '🎲 Défi du jour',
+      disabled: !(appActiveByKey.daily ?? true),
       onPress: () => navigation.navigate('DailyChallenge' as any),
     },
     {
       key: 'profile', icon: 'personOutline' as const, color: Colors.textSecondary,
       label: t('home.nav.profile'),
+      disabled: !(appActiveByKey.profile ?? true),
       onPress: () => navigation.navigate('Profile'),
     },
-  ], [t, summary?.totalResources, summary?.dueCards, summary?.todayReminders?.length, goToExplore, lang, todayFocus, navigation]);
+  ], [t, summary?.totalResources, summary?.dueCards, summary?.todayReminders?.length, goToExplore, lang, todayFocus, navigation, appActiveByKey]);
 
   const AI_TILES = useMemo(() => [
     {
@@ -195,7 +230,7 @@ export default function HomeScreen() {
       description: lang === 'ar' ? 'مساعدك الذكي' : 'Ton assistant IA',
       emoji: '🤖',
       badge: t('common.soon'),
-      disabled: true,
+      disabled: !(appActiveByKey.askzad ?? false),
       onPress: () => navigation.navigate('AskZad' as any),
     },
     {
@@ -206,7 +241,7 @@ export default function HomeScreen() {
       label: lang === 'ar' ? 'ويسبر' : 'Whisper',
       description: lang === 'ar' ? 'تحويل الصوت لنص' : 'Transcription vocale',
       emoji: '🎙️',
-      disabled: false,
+      disabled: !(appActiveByKey.whisper ?? true),
       onPress: () => navigation.navigate('VoiceNotes' as any),
     },
     {
@@ -217,7 +252,8 @@ export default function HomeScreen() {
       label: lang === 'ar' ? '✨ ملخص ذكي' : '✨ Résumé intelligent',
       description: lang === 'ar' ? 'PDF/صورة → ملخص + PDF' : 'PDF/image → résumé + PDF',
       emoji: '📄',
-      disabled: false,
+      badge: t('common.soon'),
+      disabled: !(appActiveByKey.ai_summary ?? false) || !(paygActiveByKey.ai_summary ?? false),
       onPress: () => {
         const root = (navigation as any)?.getParent?.()?.getParent?.();
         if (root?.navigate) root.navigate('AISummaryImport');
@@ -232,37 +268,42 @@ export default function HomeScreen() {
       label: lang === 'ar' ? '✅ تصحيح تمارين' : '✅ Correction IA',
       description: lang === 'ar' ? 'صورة/نص → حل مفصل + PDF' : 'Photo/texte → correction + PDF',
       emoji: '✅',
-      disabled: false,
+      badge: t('common.soon'),
+      disabled: !(appActiveByKey.ai_exercise_correction ?? false) || !(paygActiveByKey.ai_exercise_correction ?? false),
       onPress: () => {
         const root = (navigation as any)?.getParent?.()?.getParent?.();
         if (root?.navigate) root.navigate('AIExerciseImport');
         else navigation.navigate('AIExerciseImport' as any);
       },
     },
-  ], [lang, navigation, t]);
+  ], [lang, navigation, t, paygActiveByKey.ai_summary, paygActiveByKey.ai_exercise_correction, appActiveByKey]);
 
   const COMMUNITY_TILES = useMemo(() => [
     {
       key: 'jobs', icon: 'briefcaseOutline' as const, color: Colors.modules.jobs,
       label: t('tab.jobs'),
+      disabled: !(appActiveByKey.jobs ?? true),
       onPress: () => goToExplore('Jobs'),
     },
     {
       key: 'housing', icon: 'homeOutline' as const, color: '#F59E0B',
       label: lang === 'ar' ? '🏠 سكن' : '🏠 Logement',
+      disabled: !(appActiveByKey.housing ?? true),
       onPress: () => goToExplore('Housing'),
     },
     {
       key: 'courses', icon: 'playCircleOutline' as const, color: '#3B82F6',
       label: lang === 'ar' ? '🎬 دروس فيديو' : '🎬 Cours vidéo',
+      disabled: !(appActiveByKey.courses ?? true),
       onPress: () => goToExplore('Courses'),
     },
     {
       key: 'forum', icon: 'chatbubblesOutline' as const, color: '#F59E0B',
       label: lang === 'ar' ? '💬 المنتدى' : '💬 Forum Q&A',
+      disabled: !(appActiveByKey.forum ?? true),
       onPress: () => navigation.navigate('Forum' as any),
     },
-  ], [t, goToExplore, lang, navigation]);
+  ], [t, goToExplore, lang, navigation, appActiveByKey]);
 
   if (loading) {
     return (
@@ -469,8 +510,9 @@ export default function HomeScreen() {
                   <TouchableOpacity
                     key={tile.key}
                     style={styles.moduleTile}
-                    onPress={tile.onPress}
+                    onPress={tile.disabled ? undefined : tile.onPress}
                     activeOpacity={0.78}
+                    disabled={tile.disabled}
                   >
                     <View style={[styles.tileIconBox, { backgroundColor: tile.color + '18' }]}>
                       <AppIcon name={tile.icon} size={22} color={tile.color} />
@@ -479,6 +521,11 @@ export default function HomeScreen() {
                     {tile.badge && (
                       <View style={[styles.tileBadge, { backgroundColor: tile.color + '20' }]}>
                         <Text style={[styles.tileBadgeText, { color: tile.color }]}>{tile.badge}</Text>
+                      </View>
+                    )}
+                    {tile.disabled && (
+                      <View style={styles.soonOverlay} pointerEvents="none">
+                        <Text style={styles.soonText}>{t('common.soon')}</Text>
                       </View>
                     )}
                   </TouchableOpacity>
@@ -528,13 +575,19 @@ export default function HomeScreen() {
                   <TouchableOpacity
                     key={tile.key}
                     style={styles.moduleTile}
-                    onPress={tile.onPress}
+                    onPress={tile.disabled ? undefined : tile.onPress}
                     activeOpacity={0.78}
+                    disabled={tile.disabled}
                   >
                     <View style={[styles.tileIconBox, { backgroundColor: tile.color + '18' }]}>
                       <AppIcon name={tile.icon} size={22} color={tile.color} />
                     </View>
                     <Text style={styles.tileLabel} numberOfLines={1}>{tile.label}</Text>
+                    {tile.disabled && (
+                      <View style={styles.soonOverlay} pointerEvents="none">
+                        <Text style={styles.soonText}>{t('common.soon')}</Text>
+                      </View>
+                    )}
                   </TouchableOpacity>
                 ))}
               </View>
@@ -971,6 +1024,7 @@ const makeStyles = (C: typeof Colors) => StyleSheet.create({
     padding: 16, gap: 10,
     shadowColor: '#0F0A1F', shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 3 },
     elevation: 2,
+    overflow: 'hidden',
   },
   tileIconBox: {
     width: 46, height: 46, borderRadius: 13,
@@ -983,6 +1037,20 @@ const makeStyles = (C: typeof Colors) => StyleSheet.create({
     borderRadius: 999,
   },
   tileBadgeText: { fontSize: 11, fontWeight: '900', letterSpacing: 0.2 },
+
+  soonOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.70)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  soonText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#111827',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+  },
 
   /* Section (kept for compat) */
   section: { marginBottom: 22 },

@@ -371,27 +371,15 @@ const ProfileScreen = () => {
           <AppIcon name="chevronForward" size={15} color="#E879F9" />
         </TouchableOpacity>
 
-        {/* Spending/Billing History */}
+        {/* Billing hub (subscription + PAYG wallet) */}
         <TouchableOpacity
           style={[styles.wrappedBtn, { backgroundColor: '#7C3AED', marginTop: 12 }]}
-          onPress={() => (navigation as any).navigate('Spending')}
+          onPress={() => (navigation as any).navigate('BillingHub')}
           activeOpacity={0.8}
         >
-          <Text style={{ fontSize: 18 }}>💰</Text>
+          <Text style={{ fontSize: 18 }}>💳</Text>
           <Text style={[styles.wrappedBtnText, { color: '#FFFFFF' }]}>
-            {isAr ? '💳 سجل المصروفات والرصيد' : '💳 Historique des dépenses'}
-          </Text>
-          <AppIcon name="chevronForward" size={15} color="#FFFFFF" />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.wrappedBtn, { backgroundColor: '#0D9488', marginTop: 10 }]}
-          onPress={() => (navigation as any).navigate('MyPlan')}
-          activeOpacity={0.8}
-        >
-          <Text style={{ fontSize: 18 }}>📊</Text>
-          <Text style={[styles.wrappedBtnText, { color: '#FFFFFF' }]}>
-            {isAr ? '📊 عرضي والحدود' : '📊 Mon offre & quotas'}
+            {isAr ? '💳 الدفع والاشتراكات' : '💳 Paiement & abonnements'}
           </Text>
           <AppIcon name="chevronForward" size={15} color="#FFFFFF" />
         </TouchableOpacity>

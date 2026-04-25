@@ -23,6 +23,8 @@ import { queryKeys } from '../../utils/queryKeys';
 import { usePremiumFeature } from '../../hooks/usePremiumFeature';
 import PremiumGate from '../../components/common/PremiumGate';
 import { safeBack } from '../../utils/safeBack';
+import { notifyWalletSpent } from '../../utils/walletUtils';
+import { computePaygChargeMru } from '@/utils/paygCharge';
 
 type ScanResult = { deck: { id: string; title: string; color: string }; cards: { front: string; back: string }[]; cards_count: number };
 
@@ -79,6 +81,10 @@ export default function ScanCreateScreen() {
       setResult(data);
       qc.invalidateQueries({ queryKey: queryKeys.flashcards.decks() });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      // Notifier le débit PAYG (exactement selon la grille)
+      const chargeMru = computePaygChargeMru({ featureKey: 'ai_flashcards', uses: 1 });
+      if (chargeMru > 0) notifyWalletSpent('ai_flashcards', chargeMru);
     } catch (e: any) {
       Alert.alert(isAr ? 'خطأ' : 'Erreur', e.message ?? (isAr ? 'فشل المسح الضوئي' : 'Impossible de scanner'));
     } finally {

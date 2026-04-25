@@ -10,6 +10,7 @@ import { Text } from '@/ui/Text';
 import { Colors, Spacing, BorderRadius, Shadows, Gradients } from '@/theme';
 import { useAuth } from '@/context/AuthContext';
 import { apiUpload } from '@/utils/api';
+import { getPaygFeature } from '@/constants/paygFeatures';
 
 type Picked = { uri: string; name: string; type: string; size?: number } | null;
 
@@ -17,6 +18,7 @@ export default function AISummaryImportScreen({ navigation }: any) {
   const { token } = useAuth();
   const [picked, setPicked] = useState<Picked>(null);
   const [loading, setLoading] = useState(false);
+  const pricing = getPaygFeature('ai_summary_pdf');
 
   const pickDocument = async () => {
     const r = await DocumentPicker.getDocumentAsync({
@@ -93,12 +95,29 @@ export default function AISummaryImportScreen({ navigation }: any) {
               <AppIcon name="arrowBack" size={22} color="#fff" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Résumé intelligent</Text>
-            <View style={{ width: 44 }} />
+            <TouchableOpacity onPress={() => navigation.navigate('AISummaryHistory')} style={styles.historyBtn} activeOpacity={0.85}>
+              <AppIcon name="timeOutline" size={20} color="#fff" />
+            </TouchableOpacity>
           </View>
         </SafeAreaView>
       </LinearGradient>
 
       <View style={styles.content}>
+        {!!pricing && (
+          <View style={styles.priceCard}>
+            <View style={styles.priceRow}>
+              <Text style={styles.priceTitle}>Tarification</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('BillingHub')} activeOpacity={0.85} style={styles.priceCta}>
+                <Text style={styles.priceCtaText}>Wallet</Text>
+                <AppIcon name="chevronForward" size={16} color="#7C3AED" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.priceBody}>{pricing.usageDefinitionFr}</Text>
+            <Text style={styles.priceBody}>
+              {pricing.pricing.map((p) => `${p.labelFr}: ${p.priceMru ?? '—'} MRU`).join(' · ')}
+            </Text>
+          </View>
+        )}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Importer un cours</Text>
           <Text style={styles.cardSub}>
@@ -152,7 +171,27 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.32)',
     alignItems: 'center', justifyContent: 'center',
   },
+  historyBtn: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.32)',
+    alignItems: 'center', justifyContent: 'center',
+  },
   content: { flex: 1, padding: Spacing.lg },
+  priceCard: {
+    backgroundColor: '#fff',
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+    marginBottom: 12,
+    ...Shadows.sm,
+  },
+  priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  priceTitle: { fontSize: 14, fontWeight: '900', color: Colors.textPrimary },
+  priceCta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  priceCtaText: { fontSize: 13, fontWeight: '900', color: '#7C3AED' },
+  priceBody: { fontSize: 12, color: Colors.textMuted, marginTop: 6, lineHeight: 16, fontWeight: '600' },
   card: {
     backgroundColor: '#fff',
     borderRadius: BorderRadius.xl,

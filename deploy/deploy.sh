@@ -7,10 +7,18 @@ if [ ! -f "$SSH_KEY" ]; then
 fi
 SSH_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=no"
 
-echo "=== Deploying Studara API to $SERVER_IP ==="
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+BACKEND_DIR="$(cd "$SCRIPT_DIR/../../studara-admin" && pwd)"
+ADMIN_UI_DIR="$(cd "$SCRIPT_DIR/../admin" && pwd)"
+ECOSYSTEM_FILE="$SCRIPT_DIR/ecosystem.config.js"
+API_ENV_FILE="$SCRIPT_DIR/api.env"
 
-# Build locally first
-cd /Users/mohameda/Desktop/studara/api
+echo "=== Deploying Studara (backend + admin UI) to $SERVER_IP ==="
+echo "Backend dir: $BACKEND_DIR"
+echo "Admin UI dir: $ADMIN_UI_DIR"
+
+# Build backend locally first
+cd "$BACKEND_DIR"
 npm install
 npm run build
 
@@ -24,19 +32,32 @@ rsync -avz -e "ssh $SSH_OPTS" \
   --exclude .env \
   --exclude .env.* \
   --exclude uploads \
-  /Users/mohameda/Desktop/studara/api/ \
+  "$BACKEND_DIR/" \
   root@$SERVER_IP:/var/www/studara/api/
 
 # Sync ecosystem config so PM2 always knows the correct cwd
-rsync -avz -e "ssh $SSH_OPTS" \
-  /Users/mohameda/Desktop/studara/deploy/ecosystem.config.js \
-  root@$SERVER_IP:/var/www/studara/api/ecosystem.config.js
+if [ -f "$ECOSYSTEM_FILE" ]; then
+  rsync -avz -e "ssh $SSH_OPTS" \
+    "$ECOSYSTEM_FILE" \
+    root@$SERVER_IP:/var/www/studara/api/ecosystem.config.js
+fi
 
-# Sync admin files
-cd /Users/mohameda/Desktop/studara/admin
-npm install
-npm run build
-rsync -avz -e "ssh $SSH_OPTS" dist/ root@$SERVER_IP:/var/www/studara/admin/
+# Optional: sync deploy/api.env if you created it (api.env.example is NOT used)
+if [ -f "$API_ENV_FILE" ]; then
+  rsync -avz -e "ssh $SSH_OPTS" \
+    "$API_ENV_FILE" \
+    root@$SERVER_IP:/var/www/studara/api/deploy/api.env
+fi
+
+# Build admin UI locally (Vite) and sync dist/
+if [ -f "$ADMIN_UI_DIR/package.json" ]; then
+  cd "$ADMIN_UI_DIR"
+  npm install
+  npm run build
+  rsync -avz -e "ssh $SSH_OPTS" \
+    "$ADMIN_UI_DIR/dist/" \
+    root@$SERVER_IP:/var/www/studara/admin/
+fi
 
 # On server: install deps, run migrations, start API
 ssh $SSH_OPTS root@$SERVER_IP << 'ENDSSH'
@@ -56,3 +77,4 @@ pm2 save
 ENDSSH
 
 echo "=== Deploy done! API: http://$SERVER_IP:3000 ==="
+echo "=== Admin UI should be served at: https://api.radar-mr.com/admin ==="

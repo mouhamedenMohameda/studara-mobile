@@ -4,9 +4,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { AppIcon } from '@/icons';
 import { Text } from '@/ui/Text';
-import { Colors, BorderRadius, Shadows, Spacing } from '@/theme';
+import { BorderRadius, Shadows, Spacing } from '@/theme';
 
-export interface ExerciseCreditsCardProps {
+export interface SummaryCreditsCardProps {
   balanceMru: number;
   balanceLoading: boolean;
   /** Coût MRU pour l’action (null = encore inconnu côté serveur) */
@@ -14,8 +14,7 @@ export interface ExerciseCreditsCardProps {
   basis?: 'pages' | 'words' | 'fallback' | null;
   pageCount?: number | null;
   wordCount?: number | null;
-  isPhoto?: boolean;
-  /** Sous-titre court (ex. avant upload PDF) */
+  /** Sous-titre court */
   estimateHint?: string | null;
   onRecharge: () => void;
 }
@@ -27,17 +26,16 @@ function basisLabel(b: 'pages' | 'words' | 'fallback' | null | undefined): strin
   return '';
 }
 
-export default function ExerciseCreditsCard({
+export default function SummaryCreditsCard({
   balanceMru,
   balanceLoading,
   chargeMru,
   basis,
   pageCount,
   wordCount,
-  isPhoto,
   estimateHint,
   onRecharge,
-}: ExerciseCreditsCardProps) {
+}: SummaryCreditsCardProps) {
   const unknown = chargeMru == null;
   const sufficient = !unknown && balanceMru >= chargeMru;
 
@@ -51,7 +49,7 @@ export default function ExerciseCreditsCard({
       <View style={styles.topRow}>
         <View style={styles.pill}>
           <AppIcon name="wallet" size={18} color="#FDE68A" />
-          <Text style={styles.pillLabel}>Crédits correction IA</Text>
+          <Text style={styles.pillLabel}>Crédits résumé IA</Text>
         </View>
         <TouchableOpacity onPress={onRecharge} style={styles.rechargeBtn} activeOpacity={0.85}>
           <Text style={styles.rechargeText}>Recharger</Text>
@@ -75,7 +73,7 @@ export default function ExerciseCreditsCard({
 
       <View style={styles.costRow}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.costCaption}>Coût de cette correction</Text>
+          <Text style={styles.costCaption}>Coût de ce résumé</Text>
           {unknown ? (
             <Text style={styles.hint}>{estimateHint ?? 'Estimation après préparation du document…'}</Text>
           ) : (
@@ -98,14 +96,8 @@ export default function ExerciseCreditsCard({
         )}
       </View>
 
-      {(pageCount != null || wordCount != null || isPhoto) && (
+      {(pageCount != null || wordCount != null) && (
         <View style={styles.metrics}>
-          {isPhoto ? (
-            <View style={styles.metricChip}>
-              <Text style={styles.metricEmoji}>📷</Text>
-              <Text style={styles.metricTxt}>Photo / scan</Text>
-            </View>
-          ) : null}
           {pageCount != null && pageCount > 0 ? (
             <View style={styles.metricChip}>
               <Text style={styles.metricEmoji}>📄</Text>
@@ -216,3 +208,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+

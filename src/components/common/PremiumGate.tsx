@@ -11,7 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface Props {
-  featureKey: 'whisper_studio' | 'ai_flashcards' | 'ai_course';
+  featureKey: string;
   loading: boolean;
   hasAccess: boolean;
   balanceMru: number;
@@ -66,7 +66,7 @@ const FEATURE_META: Record<string, {
 
 export default function PremiumGate({ featureKey, loading, hasAccess, balanceMru, navigation, onBack, children, lang }: Props) {
   const isAr = lang === 'ar';
-  const meta = FEATURE_META[featureKey];
+  const meta = FEATURE_META[featureKey] ?? FEATURE_META.whisper_studio;
 
   if (loading) {
     return (

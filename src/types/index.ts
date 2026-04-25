@@ -138,6 +138,7 @@ export type RootStackParamList = {
   Paywall: undefined;
   PremiumRequest: { featureKey?: string } | undefined;
   Spending: undefined;
+  BillingHub: undefined;
   UploadResource: undefined;
   Pomodoro: undefined;
   DailyChallenge: undefined;
@@ -152,9 +153,11 @@ export type RootStackParamList = {
   AISummaryImport: undefined;
   AISummaryOptions: { documentId: string };
   AISummaryResult: { summaryId: string };
+  AISummaryHistory: undefined;
   AIExerciseImport: undefined;
   AIExerciseOptions: { documentId: string };
   AIExerciseResult: { correctionId: string };
+  AIExerciseHistory: undefined;
 };
 
 export type AuthStackParamList = {

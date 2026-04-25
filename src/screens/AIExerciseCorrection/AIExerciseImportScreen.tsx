@@ -5,7 +5,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 
-import ExerciseCreditsCard from '@/components/cards/ExerciseCreditsCard';
 import { AppIcon } from '@/icons';
 import { Text } from '@/ui/Text';
 import { TextInput } from '@/ui/TextInput';
@@ -145,7 +144,13 @@ export default function AIExerciseImportScreen({ navigation }: any) {
               <AppIcon name="arrowBack" size={22} color="#fff" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Correction IA</Text>
-            <View style={{ width: 44 }} />
+            <TouchableOpacity
+              onPress={() => navigation.navigate('AIExerciseHistory')}
+              style={styles.historyBtn}
+              activeOpacity={0.85}
+            >
+              <AppIcon name="timeOutline" size={20} color="#fff" />
+            </TouchableOpacity>
           </View>
         </SafeAreaView>
       </LinearGradient>
@@ -160,17 +165,30 @@ export default function AIExerciseImportScreen({ navigation }: any) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <ExerciseCreditsCard
-            balanceMru={balanceMru}
-            balanceLoading={walletLoading}
-            chargeMru={importPricing.chargeMru}
-            basis={importPricing.basis}
-            pageCount={importPricing.pageCount ?? undefined}
-            wordCount={importPricing.wordCount ?? undefined}
-            isPhoto={importPricing.isPhoto}
-            estimateHint={importPricing.hint}
-            onRecharge={() => navigation.navigate('PremiumRequest', { featureKey: 'ai_exercise_correction' })}
-          />
+          {/* Wallet summary (no recharge card here; recharge is centralized in BillingHub) */}
+          <View style={styles.walletCard}>
+            <View style={styles.walletRow}>
+              <Text style={styles.walletTitle}>Crédits correction IA</Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('BillingHub')}
+                activeOpacity={0.85}
+                style={styles.walletCta}
+              >
+                <Text style={styles.walletCtaText}>Gérer</Text>
+                <AppIcon name="chevronForward" size={16} color="#7C3AED" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.walletBalance}>
+              {walletLoading ? '…' : `${balanceMru ?? 0} MRU`}
+            </Text>
+            <Text style={styles.walletHint}>
+              {importPricing.hint
+                ? importPricing.hint
+                : importPricing.chargeMru != null
+                  ? `Coût estimé: ${importPricing.chargeMru} MRU`
+                  : 'Choisis un fichier pour estimer le coût.'}
+            </Text>
+          </View>
 
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Importer l’exercice</Text>
@@ -263,7 +281,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  historyBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.32)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   content: { flexGrow: 1, padding: Spacing.lg, paddingBottom: 140 },
+  walletCard: {
+    backgroundColor: '#fff',
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+    marginBottom: 12,
+    ...Shadows.sm,
+  },
+  walletRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  walletTitle: { fontSize: 14, fontWeight: '900', color: Colors.textPrimary },
+  walletCta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  walletCtaText: { fontSize: 13, fontWeight: '900', color: '#7C3AED' },
+  walletBalance: { fontSize: 22, fontWeight: '900', color: '#7C3AED', marginTop: 8 },
+  walletHint: { fontSize: 12, color: Colors.textMuted, marginTop: 6, lineHeight: 16 },
   card: {
     backgroundColor: '#fff',
     borderRadius: BorderRadius.xl,

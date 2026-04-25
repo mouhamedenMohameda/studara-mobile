@@ -19,6 +19,7 @@ import VoiceNoteDetailScreen from '../screens/VoiceNotes/VoiceNoteDetailScreen';
 import AskZadScreen         from '../screens/Home/AskZadScreen';
 import PaywallScreen        from '../screens/Paywall/PaywallScreen';
 import MyPlanScreen         from '../screens/Profile/MyPlanScreen';
+import BillingHubScreen     from '../screens/Billing/BillingHubScreen';
 import ForumScreen          from '../screens/Forum/ForumScreen';
 import ForumPostScreen      from '../screens/Forum/ForumPostScreen';
 import { requestNotificationPermissions, scheduleRageQuitNotification } from '../utils/notifications';
@@ -29,9 +30,11 @@ import PasswordResetSetNewPasswordScreen from '../screens/Security/PasswordReset
 import AISummaryImportScreen from '../screens/AISummaries/AISummaryImportScreen';
 import AISummaryOptionsScreen from '../screens/AISummaries/AISummaryOptionsScreen';
 import AISummaryResultScreen from '../screens/AISummaries/AISummaryResultScreen';
+import AISummaryHistoryScreen from '../screens/AISummaries/AISummaryHistoryScreen';
 import AIExerciseImportScreen from '../screens/AIExerciseCorrection/AIExerciseImportScreen';
 import AIExerciseOptionsScreen from '../screens/AIExerciseCorrection/AIExerciseOptionsScreen';
 import AIExerciseResultScreen from '../screens/AIExerciseCorrection/AIExerciseResultScreen';
+import AIExerciseHistoryScreen from '../screens/AIExerciseCorrection/AIExerciseHistoryScreen';
 import { apiRequest } from '../utils/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PENDING_RESET_INTENT_KEY } from '../constants/security';
@@ -137,6 +140,13 @@ const RootNavigator = () => {
       )}
       {isAuthenticated && (
         <Stack.Screen
+          name="AISummaryHistory"
+          component={AISummaryHistoryScreen}
+          options={{ animation: 'slide_from_right' }}
+        />
+      )}
+      {isAuthenticated && (
+        <Stack.Screen
           name="AIExerciseImport"
           component={AIExerciseImportScreen}
           options={{ animation: 'slide_from_right' }}
@@ -153,6 +163,13 @@ const RootNavigator = () => {
         <Stack.Screen
           name="AIExerciseResult"
           component={AIExerciseResultScreen}
+          options={{ animation: 'slide_from_right' }}
+        />
+      )}
+      {isAuthenticated && (
+        <Stack.Screen
+          name="AIExerciseHistory"
+          component={AIExerciseHistoryScreen}
           options={{ animation: 'slide_from_right' }}
         />
       )}
@@ -187,6 +204,14 @@ const RootNavigator = () => {
         <Stack.Screen
           name="Spending"
           component={SpendingScreen}
+          options={{ animation: 'slide_from_right' }}
+        />
+      )}
+      {/* Billing hub — subscription + PAYG wallet */}
+      {isAuthenticated && (
+        <Stack.Screen
+          name="BillingHub"
+          component={BillingHubScreen}
           options={{ animation: 'slide_from_right' }}
         />
       )}

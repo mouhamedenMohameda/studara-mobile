@@ -241,6 +241,9 @@ const ResourceDetailScreen = () => {
       setSummaryText(data.summary);
       setSummaryDone(true);
       const parts: string[] = [];
+      if (data.cached) {
+        parts.push('✅ هذا الملخّص تم توليده سابقًا (مخزّن) — لا يتم الخصم مرة ثانية.');
+      }
       if (data.course_text_source === 'metadata_only') {
         parts.push('ملخّص مبني على بيانات المورد فقط (لا يوجد نص مستخرج من الملف على الخادم).');
       }

@@ -19,6 +19,7 @@ const NAV = [
   { to: '/premium-requests',   icon: '💎', label: 'طلبات الاشتراك'      },
   { to: '/subscriptions',      icon: '🎟️', label: 'إدارة الاشتراكات'    },
   { to: '/ai-usage',           icon: '🤖', label: 'استخدام Ara IA'       },
+  { to: '/feature-flags',      icon: '🧩', label: 'تفعيل/تعطيل الميزات'   },
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
